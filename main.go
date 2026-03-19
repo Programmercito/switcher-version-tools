@@ -27,7 +27,14 @@ const (
 )
 
 func printLogo() {
-	fmt.Printf("%sSwitcher Java - Gestiona tus versiones%s\n", Yellow, Reset)
+	fmt.Printf("%s", Yellow)
+	fmt.Println(" ____          _ _       _       _____           _     ")
+	fmt.Println("/ ___|_      _(_) |_ ___| |__   |_   _|__   ___ | |___ ")
+	fmt.Println("\\___ \\ \\ /\\ / / | __/ __| '_ \\    | |/ _ \\ / _ \\| / __|")
+	fmt.Println(" ___) \\ V  V /| | || (__| | | |   | | (_) | (_) | \\__ \\")
+	fmt.Println("|____/ \\_/\\_/ |_|\\__\\___|_| |_|   |_|\\___/ \\___/|_|___/")
+	fmt.Printf("%s\n", Reset)
+	fmt.Printf("%s  switch-tools — gestiona versiones de Java/Maven/Gradle%s\n\n", Cyan, Reset)
 }
 
 type Download struct {
@@ -61,17 +68,18 @@ func (pw *progressWriter) Write(p []byte) (int, error) {
 func main() {
 	printLogo()
 	if len(os.Args) < 2 {
-		fmt.Printf("%sError: Parámetros insuficientes.%s\n", Red, Reset)
-		fmt.Println("Modo descarga: app <url> <tipo> <alias>")
-		fmt.Println("Modo cambio: app <alias>")
-		fmt.Println("Modo lista: app list")
+		fmt.Printf("%sError: Parámetros insuficientes.%s\n\n", Red, Reset)
+		fmt.Printf("%sUso:%s\n", Cyan, Reset)
+		fmt.Println("  switch-tools <url> <tipo> <alias>    - Descargar e instalar una versión")
+		fmt.Println("  switch-tools <alias>                 - Cambiar a una versión ya instalada")
+		fmt.Println("  switch-tools list | ist              - Listar todas las instalaciones disponibles")
 		os.Exit(1)
 	}
 
 	// Determinar modo
 	if len(os.Args) == 2 {
 		arg := os.Args[1]
-		if arg == "list" {
+		if arg == "list" || arg == "ist" {
 			listCurrent()
 			return
 		} else {
@@ -98,18 +106,18 @@ func main() {
 
 		downloadAndSet(urlStr, tipo, alias)
 	} else {
-		fmt.Printf("%sError: Número de parámetros incorrecto.%s\n", Red, Reset)
-		fmt.Println("Modo descarga: app <url> <tipo> <alias>")
-		fmt.Println("Modo cambio: app <alias>")
-		fmt.Println("Modo lista: app list")
+		fmt.Printf("%sError: Número de parámetros incorrecto.%s\n\n", Red, Reset)
+		fmt.Printf("%sUso:%s\n", Cyan, Reset)
+		fmt.Println("  switch-tools <url> <tipo> <alias>    - Descargar e instalar una versión")
+		fmt.Println("  switch-tools <alias>                 - Cambiar a una versión ya instalada")
+		fmt.Println("  switch-tools list | ist              - Listar todas las instalaciones disponibles")
 		os.Exit(1)
 	}
 }
 
 func downloadAndSet(urlStr, tipo, alias string) {
-	fmt.Printf("%sURL: %s%s\n", Blue, urlStr, Reset)
-	fmt.Printf("%sTipo: %s%s\n", Blue, tipo, Reset)
-	fmt.Printf("%sAlias: %s%s\n", Blue, alias, Reset)
+	fmt.Printf("%s🚀 Iniciando instalación de %s (%s)%s\n", Yellow, alias, tipo, Reset)
+	fmt.Printf("%sURL: %s%s\n", Cyan, urlStr, Reset)
 
 	// Verificar si el directorio ya existe
 	homeDir, err := os.UserHomeDir()
@@ -392,8 +400,9 @@ func switchToAlias(alias string) {
 				os.Exit(1)
 			}
 			actualPath := filepath.Join(targetDir, subDir)
-			fmt.Printf("%sCambiando a alias '%s' (%s)%s\n", Blue, alias, d.Type, Reset)
+			fmt.Printf("%s🔄 Cambiando a alias '%s' (tipo: %s)...%s\n", Yellow, alias, d.Type, Reset)
 			setEnvVars(d.Type, actualPath, alias)
+			fmt.Printf("%s✅ Listo: ahora se está usando '%s' para %s.%s\n", Green, alias, d.Type, Reset)
 			return
 		}
 	}
@@ -419,31 +428,13 @@ func listCurrent() {
 		config.Current = make(map[string]string)
 	}
 
-	fmt.Println("Aliases actuales:")
-	for tipo, alias := range config.Current {
-		if alias != "" {
-			// Generar path
-			targetDir := filepath.Join(homeDir, "switchjdk", alias)
-			entries, err := os.ReadDir(targetDir)
-			if err != nil {
-				fmt.Printf("%sError al leer directorio para %s: %v%s\n", Red, tipo, err, Reset)
-				continue
-			}
-			var subDir string
-			for _, entry := range entries {
-				if entry.IsDir() {
-					subDir = entry.Name()
-					break
-				}
-			}
-			if subDir == "" {
-				fmt.Printf("%sError: No se encontró subdirectorio para %s%s\n", Red, tipo, Reset)
-				continue
-			}
-			actualHome := filepath.Join(targetDir, subDir)
-			binPath := actualHome + "\\bin"
-			fmt.Printf("%s: %s -> %s\n", tipo, alias, binPath)
+	fmt.Println("🔎 Instalaciones disponibles:")
+	for _, d := range config.Downloads {
+		marker := ""
+		if current, ok := config.Current[d.Type]; ok && current == d.Alias {
+			marker = " (actual)"
 		}
+		fmt.Printf("- %s (tipo: %s)%s\n", d.Alias, d.Type, marker)
 	}
 }
 
