@@ -16,7 +16,7 @@
 - **Colores y Emojis**: Interfaz amigable con colores y mensajes claros. 🎨
 - **Seguro**: Verifica integridad de archivos ZIP y evita sobrescrituras accidentales.
 
-## 📦 Instalación
+##  Instalación
 
 ### Prerrequisitos
 - **Windows 10 o superior**
@@ -46,6 +46,60 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManage
 ## 🚀 Uso
 
 ### Sintaxis Básica
+```bash
+switchjdk.exe <comando> [argumentos]
+```
+
+### Comandos Disponibles
+
+#### 1. Descargar e Instalar una Versión
+
+![Instalando](https://raw.githubusercontent.com/Programmercito/switcher-version-tools/refs/heads/main/images/instalando.png)
+
+Descarga desde una URL y configura un alias.
+```bash
+switchjdk.exe <URL> <tipo> <alias>
+```
+- **URL**: Enlace de descarga (ej. de Adoptium, Apache Maven, Gradle).
+- **Tipo**: `java`, `maven` o `gradle`.
+- **Alias**: Nombre corto para la versión (ej. `javav11`, `mav3`).
+
+**Ejemplo**:
+```bash
+switchjdk.exe https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.9_9.zip java javav17
+```
+Descarga JDK 17 y lo configura como `javav17`.
+
+#### 2. Cambiar a una Versión Instalada
+
+![Switcheo](https://raw.githubusercontent.com/Programmercito/switcher-version-tools/refs/heads/main/images/switcheo.png)
+
+```bash
+switchjdk.exe <alias>
+```
+Cambia al alias especificado, actualizando variables de entorno y PATH.
+
+**Ejemplo**:
+```bash
+switchjdk.exe javav17
+```
+Activa Java 17. ¡El PATH se actualiza automáticamente!
+
+#### 3. Listar Versiones Actuales
+
+![Lista](https://raw.githubusercontent.com/Programmercito/switcher-version-tools/refs/heads/main/images/lista.png)
+
+```bash
+switchjdk.exe list
+```
+Muestra las versiones activas para cada tipo con sus rutas `bin`.
+
+**Ejemplo de Salida**:
+```
+Aliases actuales:
+java: javav17 -> C:\Users\TuUsuario\switchjdk\javav17\jdk-17.0.9+9\bin
+maven: mav3 -> C:\Users\TuUsuario\switchjdk\mav3\apache-maven-3.9.5\bin
+```
 ```bash
 switchjdk.exe <comando> [argumentos]
 ```
