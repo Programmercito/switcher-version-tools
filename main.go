@@ -339,27 +339,23 @@ skipDownload:
 		os.Exit(1)
 	}
 
-	// Detectar el subdirectorio principal (si existe uno solo)
+	// Detección compatible: si hay una subcarpeta, entramos (como antes).
 	entries, err := os.ReadDir(targetDir)
 	if err != nil {
 		fmt.Printf("%sError al leer directorio: %v%s\n", Red, err, Reset)
 		os.Exit(1)
 	}
+
 	var subDir string
-	dirCount := 0
-	fileCount := 0
 	for _, entry := range entries {
 		if entry.IsDir() {
 			subDir = entry.Name()
-			dirCount++
-		} else {
-			fileCount++
+			break
 		}
 	}
 
 	actualHome := targetDir
-	// Si hay exactamente un directorio y no hay archivos en la raíz, ese es el home
-	if dirCount == 1 && fileCount == 0 {
+	if subDir != "" {
 		actualHome = filepath.Join(targetDir, subDir)
 	}
 
@@ -414,7 +410,7 @@ func switchToAlias(alias string) {
 
 	for _, d := range config.Downloads {
 		if d.Alias == alias {
-			// Detectar path
+			// Detectar path con lógica compatible
 			targetDir := filepath.Join(homeDir, "switchjdk", alias)
 			entries, err := os.ReadDir(targetDir)
 			if err != nil {
@@ -422,18 +418,14 @@ func switchToAlias(alias string) {
 				os.Exit(1)
 			}
 			var subDir string
-			dirCount := 0
-			fileCount := 0
 			for _, entry := range entries {
 				if entry.IsDir() {
 					subDir = entry.Name()
-					dirCount++
-				} else {
-					fileCount++
+					break
 				}
 			}
 			actualPath := targetDir
-			if dirCount == 1 && fileCount == 0 {
+			if subDir != "" {
 				actualPath = filepath.Join(targetDir, subDir)
 			}
 			fmt.Printf("%s🔄 Cambiando a alias '%s' (tipo: %s)...%s\n", Yellow, alias, d.Type, Reset)
@@ -511,18 +503,14 @@ func setEnvVars(tipo, actualHome, alias string) {
 		entries, err := os.ReadDir(targetDir)
 		if err == nil {
 			var subDir string
-			dirCount := 0
-			fileCount := 0
 			for _, entry := range entries {
 				if entry.IsDir() {
 					subDir = entry.Name()
-					dirCount++
-				} else {
-					fileCount++
+					break
 				}
 			}
 			previousActualHome := targetDir
-			if dirCount == 1 && fileCount == 0 {
+			if subDir != "" {
 				previousActualHome = filepath.Join(targetDir, subDir)
 			}
 
