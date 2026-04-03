@@ -34,7 +34,7 @@ func printLogo() {
 	fmt.Println(" ___) \\ V  V /| | || (__| | | |   | | (_) | (_) | \\__ \\")
 	fmt.Println("|____/ \\_/\\_/ |_|\\__\\___|_| |_|   |_|\\___/ \\___/|_|___/")
 	fmt.Printf("%s\n", Reset)
-	fmt.Printf("%s  switch-tools — gestiona versiones de Java/Maven/Gradle%s\n\n", Cyan, Reset)
+	fmt.Printf("%s  switch-tools — gestiona versiones de Java/Maven/Gradle/PHP/Go/Node%s\n\n", Cyan, Reset)
 }
 
 type Download struct {
@@ -68,51 +68,63 @@ func (pw *progressWriter) Write(p []byte) (int, error) {
 func main() {
 	printLogo()
 	if len(os.Args) < 2 {
-		fmt.Printf("%sError: Parámetros insuficientes.%s\n\n", Red, Reset)
-		fmt.Printf("%sUso:%s\n", Cyan, Reset)
-		fmt.Println("  switch-tools <url> <tipo> <alias>    - Descargar e instalar una versión")
-		fmt.Println("  switch-tools <alias>                 - Cambiar a una versión ya instalada")
-		fmt.Println("  switch-tools list | ist              - Listar todas las instalaciones disponibles")
+		showHelp()
 		os.Exit(1)
 	}
 
-	// Determinar modo
+	arg1 := os.Args[1]
+
+	// Comandos de un solo argumento
 	if len(os.Args) == 2 {
-		arg := os.Args[1]
-		if arg == "list" || arg == "ist" {
+		if arg1 == "list" || arg1 == "ist" || arg1 == "ls" {
 			listCurrent()
+			return
+		} else if arg1 == "help" || arg1 == "-h" || arg1 == "--help" {
+			showHelp()
 			return
 		} else {
 			// Modo cambio: <alias>
-			switchToAlias(arg)
+			switchToAlias(arg1)
 		}
-	} else if len(os.Args) == 4 {
-		// Modo descarga: <url> <tipo> <alias>
-		urlStr := os.Args[1]
-		tipo := os.Args[2]
-		alias := os.Args[3]
+		return
+	}
 
-		// Validar si es URL
-		parsedURL, err := url.ParseRequestURI(urlStr)
-		if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
-			fmt.Printf("%sError: El primer parámetro debe ser una URL válida para modo descarga.%s\n", Red, Reset)
+	// Comandos de tres argumentos: <tipo> <alias> <url_o_path>
+	if len(os.Args) == 4 {
+		tipo := os.Args[1]
+		alias := os.Args[2]
+		source := os.Args[3]
+
+		validTypes := map[string]bool{
+			"java": true, "maven": true, "gradle": true,
+			"php": true, "go": true, "node": true,
+		}
+
+		if !validTypes[tipo] {
+			fmt.Printf("%sError: Tipo '%s' no válido. Soportados: java, maven, gradle, php, go, node.%s\n", Red, tipo, Reset)
 			os.Exit(1)
 		}
 
-		if tipo != "java" && tipo != "maven" && tipo != "gradle" {
-			fmt.Printf("%sError: Tipo no válido. Debe ser 'java', 'maven' o 'gradle'.%s\n", Red, Reset)
-			os.Exit(1)
-		}
-
-		downloadAndSet(urlStr, tipo, alias)
+		downloadAndSet(source, tipo, alias)
 	} else {
 		fmt.Printf("%sError: Número de parámetros incorrecto.%s\n\n", Red, Reset)
-		fmt.Printf("%sUso:%s\n", Cyan, Reset)
-		fmt.Println("  switch-tools <url> <tipo> <alias>    - Descargar e instalar una versión")
-		fmt.Println("  switch-tools <alias>                 - Cambiar a una versión ya instalada")
-		fmt.Println("  switch-tools list | ist              - Listar todas las instalaciones disponibles")
+		showHelp()
 		os.Exit(1)
 	}
+}
+
+func showHelp() {
+	fmt.Printf("%sUso:%s\n", Cyan, Reset)
+	fmt.Println("Recuerda que para instalar una nueva versión pasamos el tipo, el alias y al final la URL o PATH local.")
+	fmt.Println("Esto permite que sea muy fácil repetir comandos cambiando solo lo último.")
+	fmt.Println("  switch-tools <tipo> <alias> <url|path_zip> - Descargar o usar zip/tar.gz local e instalar")
+	fmt.Println("  switch-tools <alias>                       - Cambiar a una versión ya instalada")
+	fmt.Println("  switch-tools list | ls                     - Listar todas las instalaciones disponibles")
+	fmt.Println("\nTipos soportados: java, maven, gradle, php, go, node")
+	fmt.Println("\nEjemplos:")
+	fmt.Println("  switch-tools java jdk17 https://.../jdk17.zip")
+	fmt.Println("  switch-tools php 8.1 C:\\Downloads\\php-8.1.zip")
+	fmt.Println("  switch-tools node v20 https://.../node-v20.tar.gz")
 }
 
 func downloadAndSet(urlStr, tipo, alias string) {
@@ -135,9 +147,17 @@ func downloadAndSet(urlStr, tipo, alias string) {
 	var tempFile string
 	if strings.HasPrefix(urlStr, "http") || strings.HasPrefix(urlStr, "https") {
 		// Validar URL
-		parsedURL, err := url.ParseRequestURI(urlStr)
-		if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {
-			fmt.Println("Error: La URL proporcionada no es válida.")
+		_, err := url.ParseRequestURI(urlStr)
+		if err != nil {
+			// Si no es URL válida, quizás es un path local relativo que no encontramos antes
+			absPath, errAbs := filepath.Abs(urlStr)
+			if errAbs == nil {
+				if _, errStat := os.Stat(absPath); errStat == nil {
+					tempFile = absPath
+					goto skipDownload
+				}
+			}
+			fmt.Printf("%sError: La URL o PATH proporcionado no es válido o no existe: %s%s\n", Red, urlStr, Reset)
 			os.Exit(1)
 		}
 
@@ -172,12 +192,19 @@ func downloadAndSet(urlStr, tipo, alias string) {
 		fmt.Println("\nDescarga completada.")
 	} else {
 		// Archivo local
-		if _, err := os.Stat(urlStr); os.IsNotExist(err) {
-			fmt.Printf("%sError: Archivo local no encontrado: %s%s\n", Red, urlStr, Reset)
+		absPath, err := filepath.Abs(urlStr)
+		if err != nil {
+			fmt.Printf("%sError al obtener ruta absoluta: %v%s\n", Red, err, Reset)
 			os.Exit(1)
 		}
-		tempFile = urlStr
+		if _, err := os.Stat(absPath); os.IsNotExist(err) {
+			fmt.Printf("%sError: Archivo local no encontrado en %s%s\n", Red, absPath, Reset)
+			os.Exit(1)
+		}
+		tempFile = absPath
 	}
+
+skipDownload:
 
 	// Descomprimir según formato
 	if strings.HasSuffix(strings.ToLower(tempFile), ".zip") {
@@ -312,24 +339,30 @@ func downloadAndSet(urlStr, tipo, alias string) {
 		os.Exit(1)
 	}
 
-	// Detectar el subdirectorio principal
+	// Detectar el subdirectorio principal (si existe uno solo)
 	entries, err := os.ReadDir(targetDir)
 	if err != nil {
 		fmt.Printf("%sError al leer directorio: %v%s\n", Red, err, Reset)
 		os.Exit(1)
 	}
 	var subDir string
+	dirCount := 0
+	fileCount := 0
 	for _, entry := range entries {
 		if entry.IsDir() {
 			subDir = entry.Name()
-			break
+			dirCount++
+		} else {
+			fileCount++
 		}
 	}
-	if subDir == "" {
-		fmt.Printf("%sError: No se encontró un subdirectorio en el ZIP.%s\n", Red, Reset)
-		os.Exit(1)
+
+	actualHome := targetDir
+	// Si hay exactamente un directorio y no hay archivos en la raíz, ese es el home
+	if dirCount == 1 && fileCount == 0 {
+		actualHome = filepath.Join(targetDir, subDir)
 	}
-	actualHome := filepath.Join(targetDir, subDir)
+
 	fmt.Printf("%sDirectorio principal detectado: %s%s\n", Green, actualHome, Reset)
 
 	// Guardar en configuración
@@ -389,17 +422,20 @@ func switchToAlias(alias string) {
 				os.Exit(1)
 			}
 			var subDir string
+			dirCount := 0
+			fileCount := 0
 			for _, entry := range entries {
 				if entry.IsDir() {
 					subDir = entry.Name()
-					break
+					dirCount++
+				} else {
+					fileCount++
 				}
 			}
-			if subDir == "" {
-				fmt.Printf("%sError: No se encontró subdirectorio.%s\n", Red, Reset)
-				os.Exit(1)
+			actualPath := targetDir
+			if dirCount == 1 && fileCount == 0 {
+				actualPath = filepath.Join(targetDir, subDir)
 			}
-			actualPath := filepath.Join(targetDir, subDir)
 			fmt.Printf("%s🔄 Cambiando a alias '%s' (tipo: %s)...%s\n", Yellow, alias, d.Type, Reset)
 			setEnvVars(d.Type, actualPath, alias)
 			fmt.Printf("%s✅ Listo: ahora se está usando '%s' para %s.%s\n", Green, alias, d.Type, Reset)
@@ -470,70 +506,83 @@ func setEnvVars(tipo, actualHome, alias string) {
 		config.Current = make(map[string]string)
 	}
 	if previous, ok := config.Current[tipo]; ok && previous != "" && previous != alias {
-		// remove previous bin
+		// intentar remover bin previo del PATH
 		targetDir := filepath.Join(homeDir, "switchjdk", previous)
 		entries, err := os.ReadDir(targetDir)
 		if err == nil {
 			var subDir string
+			dirCount := 0
+			fileCount := 0
 			for _, entry := range entries {
 				if entry.IsDir() {
 					subDir = entry.Name()
-					break
+					dirCount++
+				} else {
+					fileCount++
 				}
 			}
-			if subDir != "" {
-				previousActualHome := filepath.Join(targetDir, subDir)
-				previousBinPath := previousActualHome + "\\bin"
-				cmd := exec.Command("powershell", "-Command", fmt.Sprintf("$current = [Environment]::GetEnvironmentVariable('PATH', 'User'); $parts = $current -split ';'; $filtered = $parts | Where-Object { $_ -ne '%s' }; $new = ($filtered -join ';'); [Environment]::SetEnvironmentVariable('PATH', $new, 'User')", previousBinPath))
-				cmd.Run()
+			previousActualHome := targetDir
+			if dirCount == 1 && fileCount == 0 {
+				previousActualHome = filepath.Join(targetDir, subDir)
 			}
+
+			// Intentar remover tanto home como home\bin
+			removePathFromEnv(previousActualHome)
+			removePathFromEnv(filepath.Join(previousActualHome, "bin"))
 		}
 	}
 	config.Current[tipo] = alias
 	data, _ := json.MarshalIndent(config, "", "  ")
 	os.WriteFile(configFile, data, 0644)
 
-	if tipo == "java" {
-		// Set JAVA_HOME y JDK_HOME
-		cmd := exec.Command("setx", "JAVA_HOME", actualHome)
-		err := cmd.Run()
-		if err != nil {
-			fmt.Printf("%sError al setear JAVA_HOME: %v%s\n", Red, err, Reset)
-		} else {
-			fmt.Printf("%sJAVA_HOME establecido en %s%s\n", Green, actualHome, Reset)
+	switch tipo {
+	case "java":
+		setPersistentEnvVar("JAVA_HOME", actualHome)
+		setPersistentEnvVar("JDK_HOME", actualHome)
+		updatePath(filepath.Join(actualHome, "bin"))
+	case "maven":
+		setPersistentEnvVar("MAVEN_HOME", actualHome)
+		updatePath(filepath.Join(actualHome, "bin"))
+	case "gradle":
+		setPersistentEnvVar("GRADLE_HOME", actualHome)
+		updatePath(filepath.Join(actualHome, "bin"))
+	case "php":
+		setPersistentEnvVar("PHP_HOME", actualHome)
+		// PHP en Windows suele tener el exe en la raíz, pero revisamos si hay bin
+		if _, err := os.Stat(filepath.Join(actualHome, "bin")); err == nil {
+			updatePath(filepath.Join(actualHome, "bin"))
 		}
-		os.Setenv("JAVA_HOME", actualHome)
-		cmd = exec.Command("setx", "JDK_HOME", actualHome)
-		err = cmd.Run()
-		if err != nil {
-			fmt.Printf("%sError al setear JDK_HOME: %v%s\n", Red, err, Reset)
-		} else {
-			fmt.Printf("%sJDK_HOME establecido en %s%s\n", Green, actualHome, Reset)
-		}
-		os.Setenv("JDK_HOME", actualHome)
-		updatePath(actualHome + "\\bin")
-	} else if tipo == "maven" {
-		// Set MAVEN_HOME
-		cmd := exec.Command("setx", "MAVEN_HOME", actualHome)
-		err := cmd.Run()
-		if err != nil {
-			fmt.Printf("%sError al setear MAVEN_HOME: %v%s\n", Red, err, Reset)
-		} else {
-			fmt.Printf("%sMAVEN_HOME establecido en %s%s\n", Green, actualHome, Reset)
-		}
-		os.Setenv("MAVEN_HOME", actualHome)
-		updatePath(actualHome + "\\bin")
-	} else if tipo == "gradle" {
-		// Set GRADLE_HOME
-		cmd := exec.Command("setx", "GRADLE_HOME", actualHome)
-		err := cmd.Run()
-		if err != nil {
-			fmt.Printf("%sError al setear GRADLE_HOME: %v%s\n", Red, err, Reset)
-		} else {
-			fmt.Printf("%sGRADLE_HOME establecido en %s%s\n", Green, actualHome, Reset)
-		}
-		os.Setenv("GRADLE_HOME", actualHome)
-		updatePath(actualHome + "\\bin")
+		updatePath(actualHome)
+	case "go":
+		setPersistentEnvVar("GOROOT", actualHome)
+		updatePath(filepath.Join(actualHome, "bin"))
+	case "node":
+		setPersistentEnvVar("NODE_HOME", actualHome)
+		// Node tiene el exe en la raíz en Windows (.zip)
+		updatePath(actualHome)
 	}
-	fmt.Println("Para que los cambios surtan efecto en la sesión actual, ejecuta: refreshenv (este comando viene con Chocolatey)")
+
+	fmt.Println("\n" + Yellow + "IMPORTANTE:" + Reset + " Para que los cambios surtan efecto en la terminal actual:")
+	fmt.Println("1. Cierra y abre la terminal.")
+	fmt.Println("2. O ejecuta: " + Cyan + "refreshenv" + Reset + " (si tienes Chocolatey).")
+}
+
+func setPersistentEnvVar(name, value string) {
+	cmd := exec.Command("setx", name, value)
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("%sError al setear %s: %v%s\n", Red, name, err, Reset)
+	} else {
+		fmt.Printf("%s%s establecido en %s%s\n", Green, name, value, Reset)
+	}
+	os.Setenv(name, value)
+}
+
+func removePathFromEnv(pathToRemove string) {
+	if pathToRemove == "" {
+		return
+	}
+	// Normalizar para evitar fallos por slash/backslash
+	pathToRemove = strings.ReplaceAll(pathToRemove, "/", "\\")
+	cmd := exec.Command("powershell", "-Command", fmt.Sprintf("$current = [Environment]::GetEnvironmentVariable('PATH', 'User'); $parts = $current -split ';'; $filtered = $parts | Where-Object { $_ -ne '%s' -and $_ -ne '%s' }; $new = ($filtered -join ';'); [Environment]::SetEnvironmentVariable('PATH', $new, 'User')", pathToRemove, strings.ReplaceAll(pathToRemove, "\\", "/")))
+	cmd.Run()
 }
