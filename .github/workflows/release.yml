@@ -28,9 +28,9 @@ jobs:
       - name: Build binaries
         run: |
           mkdir -p dist
-          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/switchtool.exe .
-          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/switch-tools-linux-amd64 .
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/switch-tools-darwin-amd64 .
+          GOOS=windows GOARCH=amd64 go build -o dist/switchtool.exe .
+          GOOS=linux GOARCH=amd64 go build -o dist/switch-tools-linux-amd64 .
+          GOOS=darwin GOARCH=amd64 go build -o dist/switch-tools-darwin-amd64 .
 
       - name: Get next version
         id: version
