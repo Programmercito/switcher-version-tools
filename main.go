@@ -27,14 +27,13 @@ const (
 )
 
 func printLogo() {
-	fmt.Printf("%s", Yellow)
-	fmt.Println(" ____          _ _       _       _____           _     ")
-	fmt.Println("/ ___|_      _(_) |_ ___| |__   |_   _|__   ___ | |___ ")
-	fmt.Println("\\___ \\ \\ /\\ / / | __/ __| '_ \\    | |/ _ \\ / _ \\| / __|")
-	fmt.Println(" ___) \\ V  V /| | || (__| | | |   | | (_) | (_) | \\__ \\")
-	fmt.Println("|____/ \\_/\\_/ |_|\\__\\___|_| |_|   |_|\\___/ \\___/|_|___/")
-	fmt.Printf("%s\n", Reset)
-	fmt.Printf("%s  switch-tools — gestiona versiones de Java/Maven/Gradle/PHP/Go/Node%s\n\n", Cyan, Reset)
+	const logo = ` ____          _ _       _       _____           _ 
+/ ___|_      _(_) |_ ___| |__   |_   _|__   ___ | |
+\___ \ \ /\ / / | __/ __| '_ \    | |/ _ \ / _ \| |
+ ___) \ V  V /| | || (__| | | |   | | (_) | (_) | |
+|____/ \_/\_/ |_|\__\___|_| |_|   |_|\___/ \___/|_|`
+	fmt.Printf("%s%s%s\n", Yellow, logo, Reset)
+	fmt.Printf("%s  switchtool — gestiona versiones de Java/Maven/Gradle/PHP/Go/Node%s\n\n", Cyan, Reset)
 }
 
 type Download struct {
@@ -76,7 +75,7 @@ func main() {
 
 	// Comandos de un solo argumento
 	if len(os.Args) == 2 {
-		if arg1 == "list" || arg1 == "ist" || arg1 == "ls" {
+		if arg1 == "list" || arg1 == "ls" {
 			listCurrent()
 			return
 		} else if arg1 == "help" || arg1 == "-h" || arg1 == "--help" {
@@ -117,14 +116,14 @@ func showHelp() {
 	fmt.Printf("%sUso:%s\n", Cyan, Reset)
 	fmt.Println("Recuerda que para instalar una nueva versión pasamos el tipo, el alias y al final la URL o PATH local.")
 	fmt.Println("Esto permite que sea muy fácil repetir comandos cambiando solo lo último.")
-	fmt.Println("  switch-tools <tipo> <alias> <url|path_zip> - Descargar o usar zip/tar.gz local e instalar")
-	fmt.Println("  switch-tools <alias>                       - Cambiar a una versión ya instalada")
-	fmt.Println("  switch-tools list | ls                     - Listar todas las instalaciones disponibles")
+	fmt.Println("  switchtool <tipo> <alias> <url|path_zip> - Descargar o usar zip/tar.gz local e instalar")
+	fmt.Println("  switchtool <alias>                       - Cambiar a una versión ya instalada")
+	fmt.Println("  switchtool list | ls                     - Listar todas las instalaciones disponibles")
 	fmt.Println("\nTipos soportados: java, maven, gradle, php, go, node")
 	fmt.Println("\nEjemplos:")
-	fmt.Println("  switch-tools java jdk17 https://.../jdk17.zip")
-	fmt.Println("  switch-tools php 8.1 C:\\Downloads\\php-8.1.zip")
-	fmt.Println("  switch-tools node v20 https://.../node-v20.tar.gz")
+	fmt.Println("  switchtool java jdk17 https://.../jdk17.zip")
+	fmt.Println("  switchtool php 8.1 C:\\Downloads\\php-8.1.zip")
+	fmt.Println("  switchtool node v20 https://.../node-v20.tar.gz")
 }
 
 func downloadAndSet(urlStr, tipo, alias string) {
@@ -365,8 +364,9 @@ skipDownload:
 	configDir := filepath.Join(homeDir, "switchjdk")
 	configFile := filepath.Join(configDir, "downloads.json")
 	var config Config
-	if data, err := os.ReadFile(configFile); err == nil {
-		json.Unmarshal(data, &config)
+	if f, err := os.Open(configFile); err == nil {
+		json.NewDecoder(f).Decode(&config)
+		f.Close()
 	}
 	if config.Current == nil {
 		config.Current = make(map[string]string)
@@ -380,8 +380,12 @@ skipDownload:
 	}
 	if !found {
 		config.Downloads = append(config.Downloads, Download{Alias: alias, Type: tipo})
-		data, _ := json.MarshalIndent(config, "", "  ")
-		os.WriteFile(configFile, data, 0644)
+		if f, err := os.Create(configFile); err == nil {
+			encoder := json.NewEncoder(f)
+			encoder.SetIndent("", "  ")
+			encoder.Encode(config)
+			f.Close()
+		}
 		fmt.Printf("%sAlias '%s' agregado a la configuración.%s\n", Green, alias, Reset)
 	} else {
 		fmt.Printf("%sAlias '%s' ya existe en la configuración.%s\n", Yellow, alias, Reset)
@@ -398,12 +402,13 @@ func switchToAlias(alias string) {
 	}
 	configFile := filepath.Join(homeDir, "switchjdk", "downloads.json")
 	var config Config
-	data, err := os.ReadFile(configFile)
+	f, err := os.Open(configFile)
 	if err != nil {
 		fmt.Printf("%sError al leer configuración: %v%s\n", Red, err, Reset)
 		os.Exit(1)
 	}
-	json.Unmarshal(data, &config)
+	json.NewDecoder(f).Decode(&config)
+	f.Close()
 	if config.Current == nil {
 		config.Current = make(map[string]string)
 	}
@@ -446,12 +451,13 @@ func listCurrent() {
 	}
 	configFile := filepath.Join(homeDir, "switchjdk", "downloads.json")
 	var config Config
-	data, err := os.ReadFile(configFile)
+	f, err := os.Open(configFile)
 	if err != nil {
 		fmt.Printf("%sError al leer configuración: %v%s\n", Red, err, Reset)
 		os.Exit(1)
 	}
-	json.Unmarshal(data, &config)
+	json.NewDecoder(f).Decode(&config)
+	f.Close()
 	if config.Current == nil {
 		config.Current = make(map[string]string)
 	}
@@ -491,8 +497,9 @@ func setEnvVars(tipo, actualHome, alias string) {
 	}
 	configFile := filepath.Join(homeDir, "switchjdk", "downloads.json")
 	var config Config
-	if data, err := os.ReadFile(configFile); err == nil {
-		json.Unmarshal(data, &config)
+	if f, err := os.Open(configFile); err == nil {
+		json.NewDecoder(f).Decode(&config)
+		f.Close()
 	}
 	if config.Current == nil {
 		config.Current = make(map[string]string)
@@ -520,8 +527,12 @@ func setEnvVars(tipo, actualHome, alias string) {
 		}
 	}
 	config.Current[tipo] = alias
-	data, _ := json.MarshalIndent(config, "", "  ")
-	os.WriteFile(configFile, data, 0644)
+	if f, err := os.Create(configFile); err == nil {
+		encoder := json.NewEncoder(f)
+		encoder.SetIndent("", "  ")
+		encoder.Encode(config)
+		f.Close()
+	}
 
 	switch tipo {
 	case "java":

@@ -28,16 +28,16 @@ jobs:
       - name: Build binaries
         run: |
           mkdir -p dist
-          GOOS=windows GOARCH=amd64 go build -o dist/switch-tools-windows-amd64.exe .
-          GOOS=linux GOARCH=amd64 go build -o dist/switch-tools-linux-amd64 .
-          GOOS=darwin GOARCH=amd64 go build -o dist/switch-tools-darwin-amd64 .
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/switchtool.exe .
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/switch-tools-linux-amd64 .
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/switch-tools-darwin-amd64 .
 
       - name: Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            dist/switch-tools-windows-amd64.exe
+            dist/switchtool.exe
             dist/switch-tools-linux-amd64
             dist/switch-tools-darwin-amd64
         env:

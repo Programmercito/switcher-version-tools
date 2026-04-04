@@ -1,203 +1,74 @@
-# SwitchJDK - Gestor de Versiones Java, Maven y Gradle 🚀
+# switchtool - Gestor de Entornos para Windows 🚀
 
 ![Go](https://img.shields.io/badge/Go-1.21+-blue.svg)
 ![Windows](https://img.shields.io/badge/Windows-10%2B-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
-¿Cansado de lidiar con versiones de Java, Maven y Gradle en tu máquina Windows? ¡SwitchJDK es tu solución definitiva! Este CLI potente y fácil de usar te permite descargar, instalar y cambiar entre versiones con un solo comando. Olvídate de configuraciones manuales y PATH confusos. 💻✨
+**switchtool** es un CLI potente y minimalista diseñado para desarrolladores que necesitan cambiar rápidamente entre versiones de sus herramientas favoritas en Windows. Olvida configurar el %PATH% manualmente o pelear con variables de entorno cada vez que cambias de proyecto.
 
-## 🌟 Características Destacadas
+## 🌟 Lenguajes y Herramientas Soportadas
 
-- **Descarga Automática**: Descarga JDK, Maven o Gradle desde URLs o archivos locales con barra de progreso en tiempo real.
-- **Cambio Instantáneo**: Cambia entre versiones instaladas con un alias simple.
-- **Gestión Inteligente de PATH**: Agrega rutas directas al PATH, eliminando versiones anteriores automáticamente.
-- **Lista de Versiones**: Ve qué versiones tienes activas y sus rutas con un comando.
-- **Configuración Persistente**: Guarda todo en un archivo JSON limpio y editable.
-- **Colores y Emojis**: Interfaz amigable con colores y mensajes claros. 🎨
-- **Seguro**: Verifica integridad de archivos ZIP y evita sobrescrituras accidentales.
+- **Java** (JDK)
+- **Maven**
+- **Gradle**
+- **PHP**
+- **Go** (GOROOT)
+- **Node.js**
 
-##  Instalación
+## ✨ Características
 
-### Prerrequisitos
-- **Windows 10 o superior**
-- **Go 1.21+** (para compilar desde fuente)
-- **Chocolatey** (opcional, pero recomendado para `refreshenv`)
+- **Descarga Automática**: Soporta URLs directas (Adoptium, Apache, etc.) o archivos locales.
+- **Formatos Soportados**: Extrae automáticamente archivos `.zip`, `.tar.gz` y `.tgz`.
+- **Gestión Inteligente de PATH**: Automatiza la limpieza y actualización del PATH de usuario mediante PowerShell.
+- **Variables de Entorno**: Setea automáticamente `JAVA_HOME`, `MAVEN_HOME`, `GRADLE_HOME`, `PHP_HOME`, `GOROOT`, y `NODE_HOME`.
+- **Detección de Directorios**: Si el archivo comprimido tiene una carpeta raíz extra (común en JDKs), **switchtool** la detecta y entra en ella automáticamente.
+- **Interfaz Amigable**: Colores, barra de progreso y mensajes claros.
 
-### Compilar desde Fuente
-1. Clona el repositorio:
-   ```bash
-   git clone https://github.com/Programmercito/miapp-cli.git
-   cd miapp-cli
-   ```
+## 🛠 Instalación
 
-2. Compila:
-   ```bash
-   go build -o switchjdk.exe
-   ```
+### Opción 1: Descargar Binario
+Ve a la sección de [Releases](https://github.com/Programmercito/switcher-version-tools/releases) y descarga el `switchtool.exe`. Agrégalo a tu PATH.
 
-3. (Opcional) Agrega al PATH global para usarlo desde cualquier lugar.
-
-### Instalar Chocolatey (para `refreshenv`)
-Si no tienes Chocolatey, instálalo para recargar el entorno automáticamente:
-```powershell
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))
-```
-
-## 🚀 Uso
-
-### Sintaxis Básica
+### Opción 2: Compilar desde fuente (requiere Go)
 ```bash
-switchjdk.exe <comando> [argumentos]
+git clone https://github.com/Programmercito/switcher-version-tools.git
+cd switcher-version-tools
+go build -o switchtool.exe
 ```
 
-### Comandos Disponibles
+## 🚀 Uso rápido
 
-#### 1. Descargar e Instalar una Versión
-
-![Instalando](https://raw.githubusercontent.com/Programmercito/switcher-version-tools/refs/heads/main/images/instalando.png)
-
-Descarga desde una URL y configura un alias.
+### 1. Instalar una nueva versión (Descarga)
 ```bash
-switchjdk.exe <URL> <tipo> <alias>
+# Sintaxis: switchtool <tipo> <alias> <url_o_path>
+switchtool java jdk17 https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.9_9.zip
 ```
-- **URL**: Enlace de descarga (ej. de Adoptium, Apache Maven, Gradle).
-- **Tipo**: `java`, `maven` o `gradle`.
-- **Alias**: Nombre corto para la versión (ej. `javav11`, `mav3`).
 
-**Ejemplo**:
+### 2. Usar un archivo local
 ```bash
-switchjdk.exe https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.9_9.zip java javav17
+switchtool php 8.2 C:\Downloads\php-8.2.10-Win32-vs16-x64.zip
 ```
-Descarga JDK 17 y lo configura como `javav17`.
 
-#### 2. Cambiar a una Versión Instalada
-
-![Switcheo](https://raw.githubusercontent.com/Programmercito/switcher-version-tools/refs/heads/main/images/switcheo.png)
-
+### 3. Cambiar entre versiones
 ```bash
-switchjdk.exe <alias>
+switchtool jdk17
+switchtool php8.2
 ```
-Cambia al alias especificado, actualizando variables de entorno y PATH.
 
-**Ejemplo**:
+### 4. Listar lo que tienes instalado
 ```bash
-switchjdk.exe javav17
-```
-Activa Java 17. ¡El PATH se actualiza automáticamente!
-
-#### 3. Listar Versiones Actuales
-
-![Lista](https://raw.githubusercontent.com/Programmercito/switcher-version-tools/refs/heads/main/images/lista.png)
-
-```bash
-switchjdk.exe list
-```
-Muestra las versiones activas para cada tipo con sus rutas `bin`.
-
-**Ejemplo de Salida**:
-```
-Aliases actuales:
-java: javav17 -> C:\Users\TuUsuario\switchjdk\javav17\jdk-17.0.9+9\bin
-maven: mav3 -> C:\Users\TuUsuario\switchjdk\mav3\apache-maven-3.9.5\bin
-```
-```bash
-switchjdk.exe <comando> [argumentos]
+switchtool list
+# o
+switchtool ls
 ```
 
-### Comandos Disponibles
-
-#### 1. Descargar e Instalar una Versión
-Descarga desde una URL y configura un alias.
-```bash
-switchjdk.exe <URL> <tipo> <alias>
-```
-- **URL**: Enlace de descarga (ej. de Adoptium, Apache Maven, Gradle).
-- **Tipo**: `java`, `maven` o `gradle`.
-- **Alias**: Nombre corto para la versión (ej. `javav11`, `mav3`).
-
-**Ejemplo**:
-```bash
-switchjdk.exe https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.9%2B9/OpenJDK17U-jdk_x64_windows_hotspot_17.0.9_9.zip java javav17
-```
-Descarga JDK 17 y lo configura como `javav17`.
-
-#### 2. Cambiar a una Versión Instalada
-```bash
-switchjdk.exe <alias>
-```
-Cambia al alias especificado, actualizando variables de entorno y PATH.
-
-**Ejemplo**:
-```bash
-switchjdk.exe javav17
-```
-Activa Java 17. ¡El PATH se actualiza automáticamente!
-
-#### 3. Listar Versiones Actuales
-```bash
-switchjdk.exe list
-```
-Muestra las versiones activas para cada tipo con sus rutas `bin`.
-
-**Ejemplo de Salida**:
-```
-Aliases actuales:
-java: javav17 -> C:\Users\TuUsuario\switchjdk\javav17\jdk-17.0.9+9\bin
-maven: mav3 -> C:\Users\TuUsuario\switchjdk\mav3\apache-maven-3.9.5\bin
-```
-
-### Notas Importantes
-- Después de cambiar versiones, ejecuta `refreshenv` en PowerShell para que los cambios surjan efecto en la sesión actual. (Viene con Chocolatey).
-- Los archivos se extraen en `C:\Users\TuUsuario\switchjdk\<alias>`.
-- No puedes tener un alias llamado `list` (reservado para el comando).
-
-## 📋 Ejemplos Prácticos
-
-### Instalar y Cambiar a Java 11
-```bash
-# Descargar
-switchjdk.exe https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.21%2B9/OpenJDK11U-jdk_x64_windows_hotspot_11.0.21_9.zip java javav11
-
-# Cambiar
-switchjdk.exe javav11
-
-# Verificar
-java --version
-refreshenv
-```
-
-### Instalar Maven 3.9
-```bash
-switchjdk.exe https://downloads.apache.org/maven/maven-3/3.9.5/binaries/apache-maven-3.9.5-bin.zip maven mav395
-switchjdk.exe mav395
-mvn --version
-refreshenv
-```
-
-### Ver Versiones Activas
-```bash
-switchjdk.exe list
-```
-
-## 🛠️ Cómo Funciona Internamente
-
-- **Descargas**: Usa Go's `net/http` con barra de progreso. Soporta ZIP y TAR.GZ.
-- **Extracción Segura**: Verifica rutas para evitar ataques ZIP maliciosos.
-- **Configuración**: Archivo `downloads.json` en `switchjdk/` con lista de descargas y aliases actuales.
-- **PATH Management**: Agrega rutas directas, removiendo anteriores para evitar conflictos.
-- **Variables de Entorno**: Setea `JAVA_HOME`, `MAVEN_HOME`, `GRADLE_HOME` con `setx`.
+## 📝 Notas de Windows
+Para que los cambios en las variables de entorno se reflejen en la terminal actual:
+1. Recomendamos usar **Chocolatey** y ejecutar `refreshenv`.
+2. O simplemente cierra y abre tu terminal (PowerShell, CMD o Windows Terminal).
 
 ## 🤝 Contribuir
-
-¡Las contribuciones son bienvenidas! 
-- Reporta bugs o solicita features en Issues.
-- Envía PRs con mejoras.
-- Sigue el estilo de código Go estándar.
-
-## 📄 Licencia
-
-MIT License - ¡Úsalo libremente!
+¡Toda ayuda es bienvenida! Si quieres añadir soporte para más herramientas o mejorar la lógica de extracción, abre un Issue o envía un Pull Request.
 
 ---
-
-Hecho con ❤️ en Go. Simplifica tu desarrollo Java/Maven/Gradle. ¡Disfruta! 🎉
+Hecho con amor en Go por [Programmercito](https://github.com/Programmercito).
