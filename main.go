@@ -338,24 +338,10 @@ skipDownload:
 		os.Exit(1)
 	}
 
-	// Detección compatible: si hay una subcarpeta, entramos (como antes).
-	entries, err := os.ReadDir(targetDir)
+	actualHome, err := detectInstallRoot(targetDir, tipo)
 	if err != nil {
-		fmt.Printf("%sError al leer directorio: %v%s\n", Red, err, Reset)
+		fmt.Printf("%sError al detectar directorio principal: %v%s\n", Red, err, Reset)
 		os.Exit(1)
-	}
-
-	var subDir string
-	for _, entry := range entries {
-		if entry.IsDir() {
-			subDir = entry.Name()
-			break
-		}
-	}
-
-	actualHome := targetDir
-	if subDir != "" {
-		actualHome = filepath.Join(targetDir, subDir)
 	}
 
 	fmt.Printf("%sDirectorio principal detectado: %s%s\n", Green, actualHome, Reset)
@@ -415,23 +401,11 @@ func switchToAlias(alias string) {
 
 	for _, d := range config.Downloads {
 		if d.Alias == alias {
-			// Detectar path con lógica compatible
 			targetDir := filepath.Join(homeDir, "switchjdk", alias)
-			entries, err := os.ReadDir(targetDir)
+			actualPath, err := detectInstallRoot(targetDir, d.Type)
 			if err != nil {
-				fmt.Printf("%sError al leer directorio: %v%s\n", Red, err, Reset)
+				fmt.Printf("%sError al detectar directorio principal: %v%s\n", Red, err, Reset)
 				os.Exit(1)
-			}
-			var subDir string
-			for _, entry := range entries {
-				if entry.IsDir() {
-					subDir = entry.Name()
-					break
-				}
-			}
-			actualPath := targetDir
-			if subDir != "" {
-				actualPath = filepath.Join(targetDir, subDir)
 			}
 			fmt.Printf("%s🔄 Cambiando a alias '%s' (tipo: %s)...%s\n", Yellow, alias, d.Type, Reset)
 			setEnvVars(d.Type, actualPath, alias)
@@ -470,6 +444,43 @@ func listCurrent() {
 		}
 		fmt.Printf("- %s (tipo: %s)%s\n", d.Alias, d.Type, marker)
 	}
+}
+
+func detectInstallRoot(targetDir, tipo string) (string, error) {
+	// PHP necesita php.exe en la raíz del paquete; no debe entrar a un subdir automático.
+	if tipo == "php" {
+		if pathExists(filepath.Join(targetDir, "php.exe")) {
+			return targetDir, nil
+		}
+
+		entries, err := os.ReadDir(targetDir)
+		if err != nil {
+			return "", err
+		}
+		for _, entry := range entries {
+			if entry.IsDir() {
+				candidate := filepath.Join(targetDir, entry.Name())
+				if pathExists(filepath.Join(candidate, "php.exe")) {
+					return candidate, nil
+				}
+			}
+		}
+		return targetDir, nil
+	}
+
+	entries, err := os.ReadDir(targetDir)
+	if err != nil {
+		return "", err
+	}
+	if len(entries) == 1 && entries[0].IsDir() {
+		return filepath.Join(targetDir, entries[0].Name()), nil
+	}
+	return targetDir, nil
+}
+
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
 }
 
 func updatePath(binPath string) {
@@ -547,10 +558,7 @@ func setEnvVars(tipo, actualHome, alias string) {
 		updatePath(filepath.Join(actualHome, "bin"))
 	case "php":
 		setPersistentEnvVar("PHP_HOME", actualHome)
-		// PHP en Windows suele tener el exe en la raíz, pero revisamos si hay bin
-		if _, err := os.Stat(filepath.Join(actualHome, "bin")); err == nil {
-			updatePath(filepath.Join(actualHome, "bin"))
-		}
+		// PHP en Windows usa php.exe en la raíz del paquete extraído
 		updatePath(actualHome)
 	case "go":
 		setPersistentEnvVar("GOROOT", actualHome)
