@@ -60,6 +60,18 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           mkdir -p chocolatey/switchtool/tools chocolatey/switchtool/_rels
           cp dist/switchtool.exe chocolatey/switchtool/tools/
+          cp LICENSE chocolatey/switchtool/tools/LICENSE.txt
+
+          printf '%s\n' \
+            'VERIFICATION' \
+            'Verification is intended to assist the Chocolatey moderators and community' \
+            'in verifying that this package contents are trustworthy.' \
+            '' \
+            'This package is published by the software author (Programmercito).' \
+            "The binary included in this package was built from the source at:" \
+            "https://github.com/Programmercito/switcher-version-tools/releases/tag/${VERSION}" \
+            'using the GitHub Actions workflow defined in the repository.' \
+            'You can verify the build by inspecting the workflow run and reproducing it.' > chocolatey/switchtool/tools/VERIFICATION.txt
 
           printf '%s\n' \
             '<?xml version="1.0" encoding="utf-8"?>' \
@@ -67,11 +79,13 @@ jobs:
             '  <metadata>' \
             '    <id>switchtool</id>' \
             '    <version>'"${VERSION}"'</version>' \
-            '    <title>switchtool</title>' \
+            '    <title>switchtool - Version Manager for Windows</title>' \
             '    <authors>Programmercito</authors>' \
             '    <owners>Programmercito</owners>' \
             '    <requireLicenseAcceptance>false</requireLicenseAcceptance>' \
             '    <license type="expression">MIT</license>' \
+            '    <licenseUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/LICENSE</licenseUrl>' \
+            '    <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>' \
             '    <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>' \
             '    <projectSourceUrl>https://github.com/Programmercito/switcher-version-tools</projectSourceUrl>' \
             '    <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/switchtool</packageSourceUrl>' \
