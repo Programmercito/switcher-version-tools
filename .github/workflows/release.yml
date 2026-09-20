@@ -84,14 +84,11 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          # push.chocolatey.org's WAF blocks requests without a recognizable client User-Agent
-          # (returns a bare IIS 403 page); --fail-with-body surfaces real HTTP errors instead of
-          # silently exiting 0 with an error page printed to stdout.
-          curl -sS -L --fail-with-body -X PUT https://push.chocolatey.org/api/v2/package \
+          curl -sS -L --fail-with-body \
             -H "X-NuGet-ApiKey: $CHOCO_API_KEY" \
-            -H "User-Agent: Chocolatey Command Line/2.2.2" \
-            -H "Content-Type: application/octet-stream" \
-            --data-binary "@dist/switchtool.${VERSION}.nupkg"
+            -H "User-Agent: NuGet Command Line/6.0.0" \
+            -F "package=@dist/switchtool.${VERSION}.nupkg;type=application/octet-stream" \
+            https://push.chocolatey.org/api/v2/package
 
       - name: Create and push tag
         run: |
