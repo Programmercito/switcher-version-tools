@@ -65,51 +65,22 @@ jobs:
           cp dist/switchtool.exe chocolatey/switchtool/tools/
           cp LICENSE chocolatey/switchtool/tools/LICENSE.txt
 
-          cat > chocolatey/switchtool/tools/VERIFICATION.txt << 'VEREOF'
-          VERIFICATION
-          Verification is intended to assist the Chocolatey moderators and community
-          in verifying that this package contents are trustworthy.
+          {
+            echo "VERIFICATION"
+            echo "Verification is intended to assist the Chocolatey moderators and community"
+            echo "in verifying that this package contents are trustworthy."
+            echo ""
+            echo "This package is published by the software author (Programmercito)."
+            echo "The binary was built from: https://github.com/Programmercito/switcher-version-tools/releases/tag/${VERSION}"
+            echo "using the GitHub Actions workflow defined in the repository."
+            echo "You can verify the build by inspecting the workflow run and reproducing it."
+          } > chocolatey/switchtool/tools/VERIFICATION.txt
 
-          This package is published by the software author (Programmercito).
-          VEREOF
-          echo "The binary was built from: https://github.com/Programmercito/switcher-version-tools/releases/tag/${VERSION}" >> chocolatey/switchtool/tools/VERIFICATION.txt
-          echo "using the GitHub Actions workflow defined in the repository." >> chocolatey/switchtool/tools/VERIFICATION.txt
-          echo "You can verify the build by inspecting the workflow run and reproducing it." >> chocolatey/switchtool/tools/VERIFICATION.txt
-
-          cat > chocolatey/switchtool/switchtool.nuspec << NUSPECEOF
-<?xml version="1.0" encoding="utf-8"?>
-<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
-  <metadata>
-    <id>switchtool</id>
-    <version>${VERSION}</version>
-    <title>switchtool - Version Manager for Windows</title>
-    <authors>Programmercito</authors>
-    <owners>Programmercito</owners>
-    <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <license type="expression">MIT</license>
-    <licenseUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/LICENSE</licenseUrl>
-    <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>
-    <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>
-    <projectSourceUrl>https://github.com/Programmercito/switcher-version-tools</projectSourceUrl>
-    <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/switchtool</packageSourceUrl>
-    <docsUrl>https://github.com/Programmercito/switcher-version-tools#readme</docsUrl>
-    <bugTrackerUrl>https://github.com/Programmercito/switcher-version-tools/issues</bugTrackerUrl>
-    <releaseNotes>https://github.com/Programmercito/switcher-version-tools/releases</releaseNotes>
-    <copyright>Copyright 2026 Programmercito</copyright>
-    <summary>CLI para cambiar entre versiones de Java, Maven, Gradle, PHP, Go y Node en Windows.</summary>
-    <description>switchtool es un CLI para Windows que permite gestionar y cambiar rapidamente entre versiones de Java (JDK), Maven, Gradle, PHP, Go y Node.js. Automatiza la descarga, extraccion y configuracion de variables de entorno y PATH. Soporta archivos .zip, .tar.gz y .tgz.</description>
-    <tags>switchtool java jdk maven gradle php go node version manager</tags>
-  </metadata>
-  <files>
-    <file src="tools/**" target="tools" />
-  </files>
-</package>
-NUSPECEOF
+          sed "s/__VERSION__/${VERSION}/" chocolatey/switchtool.nuspec.template \
+            > chocolatey/switchtool/switchtool.nuspec
 
           nuget pack chocolatey/switchtool/switchtool.nuspec -OutputDirectory dist -NonInteractive
-          # nuget names it switchtool.{VERSION}.nupkg — rename to match expected pattern
-          mv dist/switchtool.${VERSION}.nupkg dist/switchtool.${VERSION}.nupkg 2>/dev/null || \
-            find dist -name "switchtool.*.nupkg" | head -1 | xargs -I{} mv {} dist/switchtool.${VERSION}.nupkg
+          find dist -name "switchtool.*.nupkg" | head -1 | xargs -I{} mv {} dist/switchtool.${VERSION}.nupkg
 
       - name: Publish to Chocolatey
         if: ${{ env.CHOCO_API_KEY != '' }}
