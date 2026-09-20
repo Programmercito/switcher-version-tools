@@ -55,14 +55,12 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool.exe .
           GOOS=windows GOARCH=arm64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool-arm64.exe .
 
-      - name: Install NuGet
-        run: sudo apt-get update && sudo apt-get install -y nuget
-
       - name: Build Chocolatey package
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          mkdir -p chocolatey/switchtool/tools
+          mkdir -p chocolatey/switchtool/tools chocolatey/switchtool/_rels
           cp dist/switchtool.exe chocolatey/switchtool/tools/
+
           printf '%s\n' \
             '<?xml version="1.0" encoding="utf-8"?>' \
             '<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">' \
@@ -82,8 +80,23 @@ jobs:
             '    <file src="tools/**" target="tools" />' \
             '  </files>' \
             '</package>' > chocolatey/switchtool/switchtool.nuspec
+
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="utf-8"?>' \
+            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' \
+            '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' \
+            '  <Default Extension="nuspec" ContentType="application/octet"/>' \
+            '  <Default Extension="exe" ContentType="application/octet"/>' \
+            '</Types>' > chocolatey/switchtool/\[Content_Types\].xml
+
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="utf-8"?>' \
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' \
+            '  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/switchtool.nuspec" Id="R1" />' \
+            '</Relationships>' > chocolatey/switchtool/_rels/.rels
+
           cd chocolatey/switchtool
-          nuget pack switchtool.nuspec -OutputDirectory ../../dist
+          zip -r ../../dist/switchtool.${VERSION}.nupkg .
 
       - name: Publish to Chocolatey
         if: ${{ env.CHOCO_API_KEY != '' }}
