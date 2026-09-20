@@ -83,11 +83,13 @@ jobs:
           zip -r ../../dist/switchtool.${VERSION}.nupkg .
 
       - name: Publish to Chocolatey
-        if: secrets.CHOCO_API_KEY != ''
+        if: ${{ env.CHOCO_API_KEY != '' }}
+        env:
+          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           curl -X PUT https://push.chocolatey.org/api/v2/package \
-            -H "X-NuGet-ApiKey: ${{ secrets.CHOCO_API_KEY }}" \
+            -H "X-NuGet-ApiKey: $CHOCO_API_KEY" \
             -F "file=@dist/switchtool.${VERSION}.nupkg"
 
       - name: Create and push tag
