@@ -55,6 +55,9 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool.exe .
           GOOS=windows GOARCH=arm64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool-arm64.exe .
 
+      - name: Install NuGet
+        run: sudo apt-get update && sudo apt-get install -y nuget
+
       - name: Build Chocolatey package
         run: |
           VERSION="${{ steps.version.outputs.version }}"
@@ -65,12 +68,12 @@ jobs:
             '<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">' \
             '  <metadata>' \
             '    <id>switchtool</id>' \
-            "    <version>${VERSION}</version>" \
+            '    <version>'"${VERSION}"'</version>' \
             '    <title>switchtool</title>' \
             '    <authors>Programmercito</authors>' \
             '    <owners>Programmercito</owners>' \
             '    <requireLicenseAcceptance>false</requireLicenseAcceptance>' \
-            '    <licenseUrl>https://github.com/Programmercito/switcher-version-tools/blob/main/LICENSE</licenseUrl>' \
+            '    <license type="expression">MIT</license>' \
             '    <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>' \
             '    <description>CLI para gestionar versiones de Java/Maven/Gradle/PHP/Go/Node en Windows.</description>' \
             '    <tags>switchtool java jdk maven gradle php go node version manager</tags>' \
@@ -80,7 +83,7 @@ jobs:
             '  </files>' \
             '</package>' > chocolatey/switchtool/switchtool.nuspec
           cd chocolatey/switchtool
-          zip -r ../../dist/switchtool.${VERSION}.nupkg .
+          nuget pack switchtool.nuspec -OutputDirectory ../../dist
 
       - name: Publish to Chocolatey
         if: ${{ env.CHOCO_API_KEY != '' }}
@@ -90,7 +93,8 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           curl -X PUT https://push.chocolatey.org/api/v2/package \
             -H "X-NuGet-ApiKey: $CHOCO_API_KEY" \
-            -F "file=@dist/switchtool.${VERSION}.nupkg"
+            -H "Content-Type: application/octet-stream" \
+            --data-binary "@dist/switchtool.${VERSION}.nupkg"
 
       - name: Create and push tag
         run: |
