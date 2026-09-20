@@ -55,69 +55,61 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool.exe .
           GOOS=windows GOARCH=arm64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool-arm64.exe .
 
+      - name: Install NuGet CLI
+        run: sudo apt-get install -y nuget
+
       - name: Build Chocolatey package
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          mkdir -p chocolatey/switchtool/tools chocolatey/switchtool/_rels
+          mkdir -p chocolatey/switchtool/tools
           cp dist/switchtool.exe chocolatey/switchtool/tools/
           cp LICENSE chocolatey/switchtool/tools/LICENSE.txt
 
-          printf '%s\n' \
-            'VERIFICATION' \
-            'Verification is intended to assist the Chocolatey moderators and community' \
-            'in verifying that this package contents are trustworthy.' \
-            '' \
-            'This package is published by the software author (Programmercito).' \
-            "The binary included in this package was built from the source at:" \
-            "https://github.com/Programmercito/switcher-version-tools/releases/tag/${VERSION}" \
-            'using the GitHub Actions workflow defined in the repository.' \
-            'You can verify the build by inspecting the workflow run and reproducing it.' > chocolatey/switchtool/tools/VERIFICATION.txt
+          cat > chocolatey/switchtool/tools/VERIFICATION.txt << 'VEREOF'
+          VERIFICATION
+          Verification is intended to assist the Chocolatey moderators and community
+          in verifying that this package contents are trustworthy.
 
-          printf '%s\n' \
-            '<?xml version="1.0" encoding="utf-8"?>' \
-            '<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">' \
-            '  <metadata>' \
-            '    <id>switchtool</id>' \
-            '    <version>'"${VERSION}"'</version>' \
-            '    <title>switchtool - Version Manager for Windows</title>' \
-            '    <authors>Programmercito</authors>' \
-            '    <owners>Programmercito</owners>' \
-            '    <requireLicenseAcceptance>false</requireLicenseAcceptance>' \
-            '    <license type="expression">MIT</license>' \
-            '    <licenseUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/LICENSE</licenseUrl>' \
-            '    <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>' \
-            '    <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>' \
-            '    <projectSourceUrl>https://github.com/Programmercito/switcher-version-tools</projectSourceUrl>' \
-            '    <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/switchtool</packageSourceUrl>' \
-            '    <docsUrl>https://github.com/Programmercito/switcher-version-tools#readme</docsUrl>' \
-            '    <bugTrackerUrl>https://github.com/Programmercito/switcher-version-tools/issues</bugTrackerUrl>' \
-            '    <releaseNotes>https://github.com/Programmercito/switcher-version-tools/releases</releaseNotes>' \
-            '    <copyright>Copyright 2026 Programmercito</copyright>' \
-            '    <summary>CLI para cambiar entre versiones de Java, Maven, Gradle, PHP, Go y Node en Windows.</summary>' \
-            '    <description>switchtool es un CLI para Windows que permite gestionar y cambiar rapidamente entre versiones de Java (JDK), Maven, Gradle, PHP, Go y Node.js. Automatiza la descarga, extraccion y configuracion de variables de entorno y PATH. Soporta archivos .zip, .tar.gz y .tgz.</description>' \
-            '    <tags>switchtool java jdk maven gradle php go node version manager</tags>' \
-            '  </metadata>' \
-            '  <files>' \
-            '    <file src="tools/**" target="tools" />' \
-            '  </files>' \
-            '</package>' > chocolatey/switchtool/switchtool.nuspec
+          This package is published by the software author (Programmercito).
+          VEREOF
+          echo "The binary was built from: https://github.com/Programmercito/switcher-version-tools/releases/tag/${VERSION}" >> chocolatey/switchtool/tools/VERIFICATION.txt
+          echo "using the GitHub Actions workflow defined in the repository." >> chocolatey/switchtool/tools/VERIFICATION.txt
+          echo "You can verify the build by inspecting the workflow run and reproducing it." >> chocolatey/switchtool/tools/VERIFICATION.txt
 
-          printf '%s\n' \
-            '<?xml version="1.0" encoding="utf-8"?>' \
-            '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' \
-            '  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' \
-            '  <Default Extension="nuspec" ContentType="application/octet"/>' \
-            '  <Default Extension="exe" ContentType="application/octet"/>' \
-            '</Types>' > chocolatey/switchtool/\[Content_Types\].xml
+          cat > chocolatey/switchtool/switchtool.nuspec << NUSPECEOF
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>switchtool</id>
+    <version>${VERSION}</version>
+    <title>switchtool - Version Manager for Windows</title>
+    <authors>Programmercito</authors>
+    <owners>Programmercito</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/LICENSE</licenseUrl>
+    <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>
+    <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>
+    <projectSourceUrl>https://github.com/Programmercito/switcher-version-tools</projectSourceUrl>
+    <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/switchtool</packageSourceUrl>
+    <docsUrl>https://github.com/Programmercito/switcher-version-tools#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/Programmercito/switcher-version-tools/issues</bugTrackerUrl>
+    <releaseNotes>https://github.com/Programmercito/switcher-version-tools/releases</releaseNotes>
+    <copyright>Copyright 2026 Programmercito</copyright>
+    <summary>CLI para cambiar entre versiones de Java, Maven, Gradle, PHP, Go y Node en Windows.</summary>
+    <description>switchtool es un CLI para Windows que permite gestionar y cambiar rapidamente entre versiones de Java (JDK), Maven, Gradle, PHP, Go y Node.js. Automatiza la descarga, extraccion y configuracion de variables de entorno y PATH. Soporta archivos .zip, .tar.gz y .tgz.</description>
+    <tags>switchtool java jdk maven gradle php go node version manager</tags>
+  </metadata>
+  <files>
+    <file src="tools/**" target="tools" />
+  </files>
+</package>
+NUSPECEOF
 
-          printf '%s\n' \
-            '<?xml version="1.0" encoding="utf-8"?>' \
-            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' \
-            '  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest" Target="/switchtool.nuspec" Id="R1" />' \
-            '</Relationships>' > chocolatey/switchtool/_rels/.rels
-
-          cd chocolatey/switchtool
-          zip -r ../../dist/switchtool.${VERSION}.nupkg .
+          nuget pack chocolatey/switchtool/switchtool.nuspec -OutputDirectory dist -NonInteractive
+          # nuget names it switchtool.{VERSION}.nupkg — rename to match expected pattern
+          mv dist/switchtool.${VERSION}.nupkg dist/switchtool.${VERSION}.nupkg 2>/dev/null || \
+            find dist -name "switchtool.*.nupkg" | head -1 | xargs -I{} mv {} dist/switchtool.${VERSION}.nupkg
 
       - name: Publish to Chocolatey
         if: ${{ env.CHOCO_API_KEY != '' }}
