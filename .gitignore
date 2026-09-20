@@ -1,0 +1,27 @@
+# Binarios del proyecto
+switchtool.exe
+switchtool_test.exe
+switchtool-arm64.exe
+
+# Directorio de distribución
+dist/
+
+# Artefactos de Go
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

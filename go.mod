@@ -1,3 +1,3 @@
-module devcito.org/switcher-versions-tools
+module github.com/Programmercito/switcher-version-tools
 
-go 1.25.3
+go 1.23
