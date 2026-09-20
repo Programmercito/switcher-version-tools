@@ -2,6 +2,7 @@ package env
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -76,5 +77,5 @@ func ReloadPath() error {
 }
 
 func normalizePath(p string) string {
-	return strings.ReplaceAll(p, "/", "\\")
+	return filepath.FromSlash(p)
 }

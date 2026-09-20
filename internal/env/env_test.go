@@ -35,18 +35,20 @@ func TestAddToPath(t *testing.T) {
 	restorePath(t, orig)
 	_ = os.Setenv("PATH", "")
 
-	if err := AddToPath("C:\\foo"); err != nil {
+	want := normalizePath("/foo")
+
+	if err := AddToPath("/foo"); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(os.Getenv("PATH"), "C:\\foo") {
-		t.Errorf("PATH = %q, should contain C:\\foo", os.Getenv("PATH"))
+	if !strings.Contains(os.Getenv("PATH"), want) {
+		t.Errorf("PATH = %q, should contain %s", os.Getenv("PATH"), want)
 	}
 
-	// Duplicado normalizado a backslash: no debe agregarse dos veces.
-	if err := AddToPath("C:/foo"); err != nil {
+	// Duplicado normalizado: no debe agregarse dos veces.
+	if err := AddToPath("/foo"); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Count(os.Getenv("PATH"), "C:\\foo") != 1 {
+	if strings.Count(os.Getenv("PATH"), want) != 1 {
 		t.Errorf("PATH = %q, duplicate added", os.Getenv("PATH"))
 	}
 }
@@ -56,13 +58,14 @@ func TestRemoveFromPath(t *testing.T) {
 	orig := os.Getenv("PATH")
 	restorePath(t, orig)
 	sep := string(os.PathListSeparator)
-	_ = os.Setenv("PATH", strings.Join([]string{"C:\\a", "C:\\b", "C:\\c"}, sep))
+	toRemove := normalizePath("/b")
+	_ = os.Setenv("PATH", strings.Join([]string{normalizePath("/a"), toRemove, normalizePath("/c")}, sep))
 
-	if err := RemoveFromPath("C:/b"); err != nil {
+	if err := RemoveFromPath("/b"); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(os.Getenv("PATH"), "C:\\b") {
-		t.Errorf("PATH = %q, should not contain C:\\b", os.Getenv("PATH"))
+	if strings.Contains(os.Getenv("PATH"), toRemove) {
+		t.Errorf("PATH = %q, should not contain %s", os.Getenv("PATH"), toRemove)
 	}
 }
 
