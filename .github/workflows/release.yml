@@ -55,8 +55,8 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool.exe .
           GOOS=windows GOARCH=arm64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool-arm64.exe .
 
-      - name: Install NuGet CLI
-        run: sudo apt-get install -y nuget
+      - name: Download NuGet CLI
+        run: curl -sS -L https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o /tmp/nuget.exe
 
       - name: Build Chocolatey package
         run: |
@@ -79,7 +79,7 @@ jobs:
           sed "s/__VERSION__/${VERSION}/" chocolatey/switchtool.nuspec.template \
             > chocolatey/switchtool/switchtool.nuspec
 
-          nuget pack chocolatey/switchtool/switchtool.nuspec -OutputDirectory dist -NonInteractive
+          mono /tmp/nuget.exe pack chocolatey/switchtool/switchtool.nuspec -OutputDirectory dist -NonInteractive
           find dist -name "switchtool.*.nupkg" | head -1 | xargs -I{} mv {} dist/switchtool.${VERSION}.nupkg
 
       - name: Publish to Chocolatey
