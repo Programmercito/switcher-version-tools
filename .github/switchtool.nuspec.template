@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>switchtool</id>
+    <version>__VERSION__</version>
+    <title>switchtool - Version Manager for Windows</title>
+    <authors>Programmercito</authors>
+    <owners>Programmercito</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">MIT</license>
+    <licenseUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/LICENSE</licenseUrl>
+    <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>
+    <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>
+    <projectSourceUrl>https://github.com/Programmercito/switcher-version-tools</projectSourceUrl>
+    <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/switchtool</packageSourceUrl>
+    <docsUrl>https://github.com/Programmercito/switcher-version-tools#readme</docsUrl>
+    <bugTrackerUrl>https://github.com/Programmercito/switcher-version-tools/issues</bugTrackerUrl>
+    <releaseNotes>https://github.com/Programmercito/switcher-version-tools/releases</releaseNotes>
+    <copyright>Copyright 2026 Programmercito</copyright>
+    <summary>CLI para cambiar entre versiones de Java, Maven, Gradle, PHP, Go y Node en Windows.</summary>
+    <description>switchtool es un CLI para Windows que permite gestionar y cambiar rapidamente entre versiones de Java (JDK), Maven, Gradle, PHP, Go y Node.js. Automatiza la descarga, extraccion y configuracion de variables de entorno y PATH. Soporta archivos .zip, .tar.gz y .tgz.</description>
+    <tags>switchtool java jdk maven gradle php go node version manager</tags>
+  </metadata>
+  <files>
+    <file src="tools/**" target="tools" />
+  </files>
+</package>

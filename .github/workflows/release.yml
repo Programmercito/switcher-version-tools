@@ -76,7 +76,7 @@ jobs:
             echo "You can verify the build by inspecting the workflow run and reproducing it."
           } > chocolatey/switchtool/tools/VERIFICATION.txt
 
-          sed "s/__VERSION__/${VERSION}/" chocolatey/switchtool.nuspec.template \
+          sed "s/__VERSION__/${VERSION}/" .github/switchtool.nuspec.template \
             > chocolatey/switchtool/switchtool.nuspec
 
           mono /tmp/nuget.exe pack chocolatey/switchtool/switchtool.nuspec -OutputDirectory dist -NonInteractive
