@@ -6,6 +6,9 @@ switchtool-arm64.exe
 # Directorio de distribución
 dist/
 
+# Paquetes de Chocolatey generados en CI
+chocolatey/
+
 # Artefactos de Go
 *.exe
 *.dll

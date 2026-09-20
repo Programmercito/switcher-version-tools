@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strings"
 
 	"github.com/Programmercito/switcher-version-tools/internal/cli"
 	"github.com/Programmercito/switcher-version-tools/internal/config"
@@ -15,16 +17,32 @@ import (
 	"github.com/Programmercito/switcher-version-tools/internal/tool"
 )
 
-const version = "1.2.0"
+// version se sobreescribe en build time con:
+// go build -ldflags "-X main.version=1.2.3" -o switchtool.exe .
+var version = "dev"
+
+func getVersion() string {
+	if version != "dev" {
+		return version
+	}
+	// Fallback para desarrollo: intentar obtener el tag de git.
+	if out, err := exec.Command("git", "describe", "--tags", "--always").Output(); err == nil {
+		return strings.TrimSpace(string(out))
+	}
+	return version
+}
 
 func main() {
+	currentVersion := getVersion()
+
 	cli.PrintLogo()
 
 	if len(os.Args) < 2 {
-		cli.ShowHelp(version)
+		cli.ShowHelp(currentVersion)
 		os.Exit(1)
 	}
 
+	ui := cli.NewUI()
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
@@ -32,9 +50,9 @@ func main() {
 
 	switch {
 	case arg1 == "help" || arg1 == "-h" || arg1 == "--help":
-		cli.ShowHelp(version)
+		cli.ShowHelp(currentVersion)
 	case arg1 == "--version":
-		fmt.Println(version)
+		fmt.Println(currentVersion)
 	case arg1 == "list" || arg1 == "ls":
 		if err := listCurrent(); err != nil {
 			cli.Errorf("Error: %v\n", err)
@@ -42,8 +60,8 @@ func main() {
 		}
 	case arg1 == "remove":
 		if len(os.Args) != 3 {
-			cli.Errorf("Error: 'remove' requiere un alias.\n")
-			cli.ShowHelp(version)
+			cli.Errorf("'remove' requiere un alias.\n")
+			cli.ShowHelp(currentVersion)
 			os.Exit(1)
 		}
 		if err := removeAlias(os.Args[2]); err != nil {
@@ -60,26 +78,22 @@ func main() {
 		alias := os.Args[2]
 		source := os.Args[3]
 		if !tool.IsValid(tipo) {
-			cli.Errorf("Error: Tipo '%s' no válido. Soportados: %s.\n", tipo, joinSupported())
+			cli.Errorf("Tipo '%s' no válido. Soportados: %s.\n", tipo, strings.Join(tool.Supported(), ", "))
 			os.Exit(1)
 		}
-		if err := install(ctx, tipo, alias, source); err != nil {
+		if err := install(ctx, ui, tipo, alias, source); err != nil {
 			cli.Errorf("Error: %v\n", err)
 			os.Exit(1)
 		}
 	default:
-		cli.Errorf("Error: Número de parámetros incorrecto.\n\n")
-		cli.ShowHelp(version)
+		cli.Errorf("Número de parámetros incorrecto.\n\n")
+		cli.ShowHelp(currentVersion)
 		os.Exit(1)
 	}
 }
 
-func joinSupported() string {
-	return fmt.Sprintf("%s", tool.Supported()) // Go formatea slices como [a b c]
-}
-
-func install(ctx context.Context, tipo, alias, source string) error {
-	cli.Warnf("🚀 Iniciando instalación de %s (%s)\n", alias, tipo)
+func install(ctx context.Context, ui *cli.UI, tipo, alias, source string) error {
+	cli.Warnf("Iniciando instalación de %s (%s)\n", alias, tipo)
 	cli.Infof("Origen: %s\n", source)
 
 	t, ok := tool.Get(tipo)
@@ -96,17 +110,17 @@ func install(ctx context.Context, tipo, alias, source string) error {
 	}
 
 	tempFile := filepath.Join(os.TempDir(), fmt.Sprintf("switchtool-%s-%s", tipo, alias))
-	cleanup, err := download.Fetch(ctx, source, tempFile, cli.PrintProgress)
+	cleanup, err := download.Fetch(ctx, source, tempFile, ui.PrintDownloadProgress)
 	if err != nil {
 		return err
 	}
 	defer cleanup()
-	fmt.Println()
+	ui.PrintDownloadComplete()
 
-	if err := extract.Extract(ctx, tempFile, targetDir, cli.PrintExtractProgress); err != nil {
+	if err := extract.Extract(ctx, tempFile, targetDir, ui.PrintExtractProgress); err != nil {
 		return err
 	}
-	fmt.Println()
+	ui.PrintExtractComplete()
 
 	actualHome, err := tool.DetectRoot(t, targetDir)
 	if err != nil {
@@ -141,7 +155,7 @@ func install(ctx context.Context, tipo, alias, source string) error {
 		return err
 	}
 
-	printReloadNotice()
+	cli.ReloadNotice()
 	return nil
 }
 
@@ -182,11 +196,11 @@ func switchToAlias(alias string) error {
 		return err
 	}
 
-	cli.Warnf("🔄 Cambiando a alias '%s' (tipo: %s)...\n", alias, d.Type)
+	cli.Warnf("Cambiando a alias '%s' (tipo: %s)...\n", alias, d.Type)
 	if err := applyToolEnv(t, actualHome); err != nil {
 		return err
 	}
-	cli.Successf("✅ Listo: ahora se está usando '%s' para %s.\n", alias, d.Type)
+	cli.Successf("Listo: ahora se está usando '%s' para %s.\n", alias, d.Type)
 	return nil
 }
 
@@ -211,7 +225,6 @@ func removeAlias(alias string) error {
 		return err
 	}
 
-	// Si es la versión actual, limpiar PATH antes de borrar.
 	if cfg.Current[d.Type] == alias {
 		actualHome, err := tool.DetectRoot(t, targetDir)
 		if err == nil {
@@ -238,13 +251,18 @@ func listCurrent() error {
 		return err
 	}
 
-	fmt.Println("🔎 Instalaciones disponibles:")
+	if len(cfg.Downloads) == 0 {
+		cli.Mutedf("No hay instalaciones registradas.\n")
+		return nil
+	}
+
+	cli.Infof("Instalaciones disponibles:\n")
 	for _, d := range cfg.Downloads {
 		marker := ""
 		if current, ok := cfg.Current[d.Type]; ok && current == d.Alias {
-			marker = " (actual)"
+			marker = " " + cli.SuccessStyle.Render("✓ actual")
 		}
-		fmt.Printf("- %s (tipo: %s)%s\n", d.Alias, d.Type, marker)
+		fmt.Printf("  • %s (%s)%s\n", d.Alias, d.Type, marker)
 	}
 	return nil
 }
@@ -274,12 +292,4 @@ func removeFromPathForAlias(t tool.Tool, alias string) error {
 		return err
 	}
 	return env.RemoveFromPath(t.BinPath(actualHome))
-}
-
-func printReloadNotice() {
-	fmt.Println()
-	cli.Warnf("IMPORTANTE:")
-	fmt.Println(" Para que los cambios surtan efecto en la terminal actual:")
-	fmt.Println("1. Cierra y abrí la terminal.")
-	fmt.Println("2. O ejecutá: " + cli.Cyan + "refreshenv" + cli.Reset + " (si tenés Chocolatey).")
 }

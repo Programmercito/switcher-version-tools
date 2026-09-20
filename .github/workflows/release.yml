@@ -23,19 +23,13 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
+          go-version: '1.24'
 
       - name: Run tests
         run: go test ./...
 
       - name: Run vet
         run: go vet ./...
-
-      - name: Build binaries
-        run: |
-          mkdir -p dist
-          GOOS=windows GOARCH=amd64 go build -o dist/switchtool.exe .
-          GOOS=windows GOARCH=arm64 go build -o dist/switchtool-arm64.exe .
 
       - name: Get next version
         id: version
@@ -54,6 +48,49 @@ jobs:
           echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Next version: $NEXT_VERSION"
 
+      - name: Build binaries
+        run: |
+          mkdir -p dist
+          VERSION="${{ steps.version.outputs.version }}"
+          GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool.exe .
+          GOOS=windows GOARCH=arm64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool-arm64.exe .
+
+      - name: Build Chocolatey package
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p chocolatey/switchtool/tools
+          cp dist/switchtool.exe chocolatey/switchtool/tools/
+          cat > chocolatey/switchtool/switchtool.nuspec <<EOF
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>switchtool</id>
+    <version>${VERSION}</version>
+    <title>switchtool</title>
+    <authors>Programmercito</authors>
+    <owners>Programmercito</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/Programmercito/switcher-version-tools/blob/main/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>
+    <description>CLI para gestionar versiones de Java/Maven/Gradle/PHP/Go/Node en Windows.</description>
+    <tags>switchtool java jdk maven gradle php go node version manager</tags>
+  </metadata>
+  <files>
+    <file src="tools/**" target="tools" />
+  </files>
+</package>
+EOF
+          cd chocolatey/switchtool
+          zip -r ../../dist/switchtool.${VERSION}.nupkg .
+
+      - name: Publish to Chocolatey
+        if: secrets.CHOCO_API_KEY != ''
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          curl -X PUT https://push.chocolatey.org/api/v2/package \
+            -H "X-NuGet-ApiKey: ${{ secrets.CHOCO_API_KEY }}" \
+            -F "file=@dist/switchtool.${VERSION}.nupkg"
+
       - name: Create and push tag
         run: |
           git config user.name "github-actions[bot]"
@@ -69,5 +106,6 @@ jobs:
           files: |
             dist/switchtool.exe
             dist/switchtool-arm64.exe
+            dist/switchtool.*.nupkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

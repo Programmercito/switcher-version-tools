@@ -1,6 +1,6 @@
 # switchtool - Gestor de Entornos para Windows 🚀
 
-![Go](https://img.shields.io/badge/Go-1.23+-blue.svg)
+![Go](https://img.shields.io/badge/Go-1.24+-blue.svg)
 ![Windows](https://img.shields.io/badge/Windows-10%2B-blue.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
 
