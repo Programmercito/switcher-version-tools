@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import zipfile, os, sys
 
-version = os.environ["VERSION"]
+version = sys.argv[1]
 base = "chocolatey/switchtool"
 out = f"dist/switchtool.{version}.nupkg"
 

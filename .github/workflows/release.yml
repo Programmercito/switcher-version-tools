@@ -76,7 +76,7 @@ jobs:
           sed "s/__VERSION__/${VERSION}/" .github/switchtool.nuspec.template \
             > chocolatey/switchtool/switchtool.nuspec
 
-          python3 .github/build_nupkg.py
+          python3 .github/build_nupkg.py "$VERSION"
 
       - name: Publish to Chocolatey
         if: ${{ env.CHOCO_API_KEY != '' }}
