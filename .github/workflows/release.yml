@@ -76,40 +76,7 @@ jobs:
           sed "s/__VERSION__/${VERSION}/" .github/switchtool.nuspec.template \
             > chocolatey/switchtool/switchtool.nuspec
 
-          python3 - <<'PYEOF'
-import zipfile, os, sys
-
-version = os.environ["VERSION"]
-base    = "chocolatey/switchtool"
-out     = f"dist/switchtool.{version}.nupkg"
-
-content_types = """\
-<?xml version="1.0" encoding="utf-8"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-  <Default Extension="nuspec" ContentType="application/octet-stream"/>
-  <Default Extension="exe"   ContentType="application/octet-stream"/>
-  <Default Extension="txt"   ContentType="application/octet-stream"/>
-</Types>"""
-
-rels = """\
-<?xml version="1.0" encoding="utf-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Type="http://schemas.microsoft.com/packaging/2010/07/manifest"
-    Target="/switchtool.nuspec" Id="R1"/>
-</Relationships>"""
-
-with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-    z.writestr("[Content_Types].xml", content_types)
-    z.writestr("_rels/.rels", rels)
-    for root, _, files in os.walk(base):
-        for f in files:
-            full = os.path.join(root, f)
-            arcname = os.path.relpath(full, base)
-            z.write(full, arcname)
-
-print(f"Created {out}")
-PYEOF
+          python3 .github/build_nupkg.py
 
       - name: Publish to Chocolatey
         if: ${{ env.CHOCO_API_KEY != '' }}
