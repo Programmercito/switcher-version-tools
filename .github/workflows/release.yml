@@ -134,7 +134,6 @@ jobs:
               <authors>Programmercito</authors>
               <owners>Programmercito</owners>
               <requireLicenseAcceptance>false</requireLicenseAcceptance>
-              <license type="expression">MIT</license>
               <licenseUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/LICENSE</licenseUrl>
               <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>
               <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>
