@@ -103,7 +103,8 @@ jobs:
 
           cat > "${PKG_DIR}/tools/chocolateyInstall.ps1" << 'PSEOF'
           $ErrorActionPreference = 'Stop'
-          $packageName = 'switchtool-cli'
+          $packageName  = 'switchtool-cli'
+          $toolsDir     = Split-Path -Parent $MyInvocation.MyCommand.Definition
           PSEOF
 
           cat >> "${PKG_DIR}/tools/chocolateyInstall.ps1" << PSEOF
@@ -112,16 +113,11 @@ jobs:
           PSEOF
 
           cat >> "${PKG_DIR}/tools/chocolateyInstall.ps1" << 'PSEOF'
-          $packageArgs = @{
-            packageName    = $packageName
-            fileType       = 'exe'
-            url64bit       = $url64
-            checksum64     = $checksum64
-            checksumType64 = 'sha256'
-            silentArgs     = ''
-            validExitCodes = @(0)
-          }
-          Install-ChocolateyPackage @packageArgs
+          Get-ChocolateyWebFile -PackageName $packageName `
+            -FileFullPath "$toolsDir\switchtool.exe" `
+            -Url64bit    $url64 `
+            -Checksum64  $checksum64 `
+            -ChecksumType64 'sha256'
           PSEOF
 
           cat > "${PKG_DIR}/${PKG_ID}.nuspec" << NUEOF
