@@ -96,14 +96,14 @@ jobs:
         run: |
           VERSION="${{ needs.build.outputs.version }}"
           SHA256="${{ needs.build.outputs.sha256 }}"
-          PKG_ID="switchtool-cli"
+          PKG_ID="swtool"
           PKG_DIR="chocolatey/${PKG_ID}"
           mkdir -p "${PKG_DIR}/tools"
           cp LICENSE "${PKG_DIR}/tools/LICENSE.txt"
 
           cat > "${PKG_DIR}/tools/chocolateyInstall.ps1" << 'PSEOF'
           $ErrorActionPreference = 'Stop'
-          $packageName  = 'switchtool-cli'
+          $packageName  = 'swtool'
           $toolsDir     = Split-Path -Parent $MyInvocation.MyCommand.Definition
           PSEOF
 
@@ -126,7 +126,7 @@ jobs:
             <metadata>
               <id>${PKG_ID}</id>
               <version>${VERSION}</version>
-              <title>switchtool-cli - Version Manager for Windows</title>
+              <title>swtool - Version Manager for Windows</title>
               <authors>Programmercito</authors>
               <owners>Programmercito</owners>
               <requireLicenseAcceptance>false</requireLicenseAcceptance>
@@ -134,14 +134,14 @@ jobs:
               <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>
               <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>
               <projectSourceUrl>https://github.com/Programmercito/switcher-version-tools</projectSourceUrl>
-              <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/switchtool-cli</packageSourceUrl>
+              <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/swtool</packageSourceUrl>
               <docsUrl>https://github.com/Programmercito/switcher-version-tools#readme</docsUrl>
               <bugTrackerUrl>https://github.com/Programmercito/switcher-version-tools/issues</bugTrackerUrl>
               <releaseNotes>https://github.com/Programmercito/switcher-version-tools/releases</releaseNotes>
               <copyright>Copyright 2026 Programmercito</copyright>
               <summary>CLI para cambiar entre versiones de Java, Maven, Gradle, PHP, Go y Node en Windows.</summary>
               <description>switchtool es un CLI para Windows que permite gestionar y cambiar rapidamente entre versiones de Java (JDK), Maven, Gradle, PHP, Go y Node.js. Automatiza la descarga, extraccion y configuracion de variables de entorno y PATH. Soporta archivos .zip, .tar.gz y .tgz.</description>
-              <tags>switchtool switchtool-cli java jdk maven gradle php go node version manager</tags>
+              <tags>swtool switchtool java jdk maven gradle php go node version manager</tags>
             </metadata>
             <files>
               <file src="tools/**" target="tools" />
@@ -159,7 +159,7 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
           VERSION="${{ needs.build.outputs.version }}"
-          choco push "dist/switchtool-cli.${VERSION}.nupkg" \
+          choco push "dist/swtool.${VERSION}.nupkg" \
             --source https://push.chocolatey.org/ \
             --api-key "$CHOCO_API_KEY"
 
@@ -182,6 +182,6 @@ jobs:
           files: |
             dist/switchtool.exe
             dist/switchtool-arm64.exe
-            dist/switchtool-cli.*.nupkg
+            dist/swtool.*.nupkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
