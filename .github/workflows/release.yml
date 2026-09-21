@@ -117,6 +117,7 @@ jobs:
             '</package>' > "chocolatey/${PKG_ID}/switchtool-cli.nuspec"
 
           python3 .github/build_nupkg.py "$VERSION"
+          mv "dist/switchtool.${VERSION}.nupkg" "dist/switchtool-cli.${VERSION}.nupkg"
 
       - name: Set up .NET
         if: ${{ env.CHOCO_API_KEY != '' }}
