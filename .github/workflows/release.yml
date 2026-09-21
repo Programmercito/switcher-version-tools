@@ -68,26 +68,23 @@ jobs:
           mkdir -p chocolatey/switchtool/tools
           cp LICENSE chocolatey/switchtool/tools/LICENSE.txt
 
-          cat > chocolatey/switchtool/tools/chocolateyInstall.ps1 << 'PSEOF'
-$ErrorActionPreference = 'Stop'
-$packageName = 'switchtool'
-$url64       = "https://github.com/Programmercito/switcher-version-tools/releases/download/__VERSION__/switchtool.exe"
-$checksum64  = "__SHA256__"
-
-$packageArgs = @{
-  packageName    = $packageName
-  fileType       = 'exe'
-  url64bit       = $url64
-  checksum64     = $checksum64
-  checksumType64 = 'sha256'
-  silentArgs     = ''
-  validExitCodes = @(0)
-}
-
-Get-ChocolateyWebFile @packageArgs -destination "$env:ChocolateyInstall\bin\switchtool.exe"
-PSEOF
-          sed -i "s|__VERSION__|${VERSION}|g; s|__SHA256__|${SHA256}|g" \
-            chocolatey/switchtool/tools/chocolateyInstall.ps1
+          printf '%s\n' \
+            '$ErrorActionPreference = '"'"'Stop'"'"'' \
+            '$packageName = '"'"'switchtool'"'"'' \
+            "\$url64       = \"https://github.com/Programmercito/switcher-version-tools/releases/download/${VERSION}/switchtool.exe\"" \
+            "\$checksum64  = \"${SHA256}\"" \
+            '' \
+            '$packageArgs = @{' \
+            '  packageName    = $packageName' \
+            '  fileType       = '"'"'exe'"'"'' \
+            '  url64bit       = $url64' \
+            '  checksum64     = $checksum64' \
+            '  checksumType64 = '"'"'sha256'"'"'' \
+            '  silentArgs     = '"'"''"'"'' \
+            '  validExitCodes = @(0)' \
+            '}' \
+            '' \
+            'Install-ChocolateyPackage @packageArgs' > chocolatey/switchtool/tools/chocolateyInstall.ps1
 
           sed "s/__VERSION__/${VERSION}/" .github/switchtool.nuspec.template \
             > chocolatey/switchtool/switchtool.nuspec
