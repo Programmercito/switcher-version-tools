@@ -55,28 +55,50 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool.exe .
           GOOS=windows GOARCH=arm64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool-arm64.exe .
 
+      - name: Compute release checksums
+        id: checksums
+        run: |
+          SHA256=$(sha256sum dist/switchtool.exe | awk '{print $1}')
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+
       - name: Build Chocolatey package
         run: |
           VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.checksums.outputs.sha256 }}"
           mkdir -p chocolatey/switchtool/tools
-          cp dist/switchtool.exe chocolatey/switchtool/tools/
           cp LICENSE chocolatey/switchtool/tools/LICENSE.txt
 
-          {
-            echo "VERIFICATION"
-            echo "Verification is intended to assist the Chocolatey moderators and community"
-            echo "in verifying that this package contents are trustworthy."
-            echo ""
-            echo "This package is published by the software author (Programmercito)."
-            echo "The binary was built from: https://github.com/Programmercito/switcher-version-tools/releases/tag/${VERSION}"
-            echo "using the GitHub Actions workflow defined in the repository."
-            echo "You can verify the build by inspecting the workflow run and reproducing it."
-          } > chocolatey/switchtool/tools/VERIFICATION.txt
+          cat > chocolatey/switchtool/tools/chocolateyInstall.ps1 << 'PSEOF'
+$ErrorActionPreference = 'Stop'
+$packageName = 'switchtool'
+$url64       = "https://github.com/Programmercito/switcher-version-tools/releases/download/__VERSION__/switchtool.exe"
+$checksum64  = "__SHA256__"
+
+$packageArgs = @{
+  packageName    = $packageName
+  fileType       = 'exe'
+  url64bit       = $url64
+  checksum64     = $checksum64
+  checksumType64 = 'sha256'
+  silentArgs     = ''
+  validExitCodes = @(0)
+}
+
+Get-ChocolateyWebFile @packageArgs -destination "$env:ChocolateyInstall\bin\switchtool.exe"
+PSEOF
+          sed -i "s|__VERSION__|${VERSION}|g; s|__SHA256__|${SHA256}|g" \
+            chocolatey/switchtool/tools/chocolateyInstall.ps1
 
           sed "s/__VERSION__/${VERSION}/" .github/switchtool.nuspec.template \
             > chocolatey/switchtool/switchtool.nuspec
 
           python3 .github/build_nupkg.py "$VERSION"
+
+      - name: Set up .NET
+        if: ${{ env.CHOCO_API_KEY != '' }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
 
       - name: Publish to Chocolatey
         if: ${{ env.CHOCO_API_KEY != '' }}
@@ -84,11 +106,9 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          curl -sS -L --fail-with-body \
-            -H "X-NuGet-ApiKey: $CHOCO_API_KEY" \
-            -H "User-Agent: NuGet Command Line/6.0.0" \
-            -F "package=@dist/switchtool.${VERSION}.nupkg;type=application/octet-stream" \
-            https://push.chocolatey.org/api/v2/package
+          dotnet nuget push "dist/switchtool.${VERSION}.nupkg" \
+            --source https://push.chocolatey.org/api/v2/package/ \
+            --api-key "$CHOCO_API_KEY"
 
       - name: Create and push tag
         run: |
