@@ -65,12 +65,13 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           SHA256="${{ steps.checksums.outputs.sha256 }}"
-          mkdir -p chocolatey/switchtool/tools
-          cp LICENSE chocolatey/switchtool/tools/LICENSE.txt
+          PKG_ID="switchtool-cli"
+          mkdir -p "chocolatey/${PKG_ID}/tools"
+          cp LICENSE "chocolatey/${PKG_ID}/tools/LICENSE.txt"
 
           printf '%s\n' \
             '$ErrorActionPreference = '"'"'Stop'"'"'' \
-            '$packageName = '"'"'switchtool'"'"'' \
+            '$packageName = '"'"'switchtool-cli'"'"'' \
             "\$url64       = \"https://github.com/Programmercito/switcher-version-tools/releases/download/${VERSION}/switchtool.exe\"" \
             "\$checksum64  = \"${SHA256}\"" \
             '' \
@@ -84,10 +85,36 @@ jobs:
             '  validExitCodes = @(0)' \
             '}' \
             '' \
-            'Install-ChocolateyPackage @packageArgs' > chocolatey/switchtool/tools/chocolateyInstall.ps1
+            'Install-ChocolateyPackage @packageArgs' > "chocolatey/${PKG_ID}/tools/chocolateyInstall.ps1"
 
-          sed "s/__VERSION__/${VERSION}/" .github/switchtool.nuspec.template \
-            > chocolatey/switchtool/switchtool.nuspec
+          printf '%s\n' \
+            '<?xml version="1.0" encoding="utf-8"?>' \
+            '<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">' \
+            '  <metadata>' \
+            "    <id>${PKG_ID}</id>" \
+            "    <version>${VERSION}</version>" \
+            '    <title>switchtool-cli - Version Manager for Windows</title>' \
+            '    <authors>Programmercito</authors>' \
+            '    <owners>Programmercito</owners>' \
+            '    <requireLicenseAcceptance>false</requireLicenseAcceptance>' \
+            '    <license type="expression">MIT</license>' \
+            '    <licenseUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/LICENSE</licenseUrl>' \
+            '    <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>' \
+            '    <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>' \
+            '    <projectSourceUrl>https://github.com/Programmercito/switcher-version-tools</projectSourceUrl>' \
+            '    <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/switchtool-cli</packageSourceUrl>' \
+            '    <docsUrl>https://github.com/Programmercito/switcher-version-tools#readme</docsUrl>' \
+            '    <bugTrackerUrl>https://github.com/Programmercito/switcher-version-tools/issues</bugTrackerUrl>' \
+            '    <releaseNotes>https://github.com/Programmercito/switcher-version-tools/releases</releaseNotes>' \
+            '    <copyright>Copyright 2026 Programmercito</copyright>' \
+            '    <summary>CLI para cambiar entre versiones de Java, Maven, Gradle, PHP, Go y Node en Windows.</summary>' \
+            '    <description>switchtool es un CLI para Windows que permite gestionar y cambiar rapidamente entre versiones de Java (JDK), Maven, Gradle, PHP, Go y Node.js. Automatiza la descarga, extraccion y configuracion de variables de entorno y PATH. Soporta archivos .zip, .tar.gz y .tgz.</description>' \
+            '    <tags>switchtool switchtool-cli java jdk maven gradle php go node version manager</tags>' \
+            '  </metadata>' \
+            '  <files>' \
+            '    <file src="tools/**" target="tools" />' \
+            '  </files>' \
+            '</package>' > "chocolatey/${PKG_ID}/switchtool-cli.nuspec"
 
           python3 .github/build_nupkg.py "$VERSION"
 
@@ -103,9 +130,12 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          dotnet nuget push "dist/switchtool.${VERSION}.nupkg" \
-            --source https://push.chocolatey.org/api/v2/package/ \
-            --api-key "$CHOCO_API_KEY"
+          dotnet nuget add source https://push.chocolatey.org/api/v2/package \
+            --name chocolatey \
+            --username any \
+            --password "$CHOCO_API_KEY" \
+            --store-password-in-clear-text
+          dotnet nuget push "dist/switchtool-cli.${VERSION}.nupkg" --source chocolatey
 
       - name: Create and push tag
         run: |
@@ -122,6 +152,6 @@ jobs:
           files: |
             dist/switchtool.exe
             dist/switchtool-arm64.exe
-            dist/switchtool.*.nupkg
+            dist/switchtool-cli.*.nupkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
