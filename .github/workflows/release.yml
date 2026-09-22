@@ -6,6 +6,16 @@ on:
       - main
       - master
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versión a publicar (ej. 1.14.0). Dejar vacío para auto-incrementar minor.'
+        required: false
+        type: string
+      force:
+        description: 'Forzar recreación de tag y release si ya existen'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -34,19 +44,24 @@ jobs:
       - name: Run vet
         run: go vet ./...
 
-      - name: Get next version
+      - name: Get version
         id: version
         run: |
-          LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | head -n1)
-          if [ -z "$LATEST_TAG" ]; then
-            NEXT_VERSION="1.0.0"
+          INPUT_VERSION="${{ github.event.inputs.version }}"
+          if [ -n "$INPUT_VERSION" ]; then
+            NEXT_VERSION="$INPUT_VERSION"
           else
-            MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
-            MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
-            PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
-            [ -z "$PATCH" ] && PATCH=0
-            NEXT_MINOR=$((MINOR + 1))
-            NEXT_VERSION="$MAJOR.$NEXT_MINOR.0"
+            LATEST_TAG=$(git tag --sort=-v:refname | grep -E '^[0-9]+\.[0-9]+(\.[0-9]+)?$' | head -n1)
+            if [ -z "$LATEST_TAG" ]; then
+              NEXT_VERSION="1.0.0"
+            else
+              MAJOR=$(echo "$LATEST_TAG" | cut -d. -f1)
+              MINOR=$(echo "$LATEST_TAG" | cut -d. -f2)
+              PATCH=$(echo "$LATEST_TAG" | cut -d. -f3)
+              [ -z "$PATCH" ] && PATCH=0
+              NEXT_MINOR=$((MINOR + 1))
+              NEXT_VERSION="$MAJOR.$NEXT_MINOR.0"
+            fi
           fi
           echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Next version: $NEXT_VERSION"
@@ -72,10 +87,16 @@ jobs:
 
       - name: Create and push tag
         run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          FORCE="${{ github.event.inputs.force }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "${{ steps.version.outputs.version }}"
-          git push origin "${{ steps.version.outputs.version }}"
+          if [ "$FORCE" == "true" ]; then
+            git tag -d "$VERSION" 2>/dev/null || true
+            git push origin --delete "$VERSION" 2>/dev/null || true
+          fi
+          git tag "$VERSION"
+          git push origin "$VERSION"
 
   chocolatey:
     name: Build and Publish Chocolatey package
@@ -159,7 +180,13 @@ jobs:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
           VERSION="${{ needs.build.outputs.version }}"
-          choco push "dist/swtool.${VERSION}.nupkg" \
+          NUPKG="dist/swtool.${VERSION}.nupkg"
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://community.chocolatey.org/packages/swtool/${VERSION}")
+          if [ "$STATUS" == "200" ]; then
+            echo "La versión $VERSION ya existe en Chocolatey. Se omite el push."
+            exit 0
+          fi
+          choco push "$NUPKG" \
             --source https://push.chocolatey.org/ \
             --api-key "$CHOCO_API_KEY"
 
@@ -173,6 +200,14 @@ jobs:
         with:
           name: binaries
           path: dist
+
+      - name: Delete existing release
+        if: github.event.inputs.force == true
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+          gh release delete "$VERSION" --yes || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Release
         uses: softprops/action-gh-release@v2
