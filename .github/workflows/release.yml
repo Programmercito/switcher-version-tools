@@ -91,10 +91,18 @@ jobs:
           FORCE="${{ github.event.inputs.force }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if [ "$FORCE" == "true" ]; then
-            git tag -d "$VERSION" 2>/dev/null || true
-            git push origin --delete "$VERSION" 2>/dev/null || true
+
+          if git rev-parse "refs/tags/$VERSION" >/dev/null 2>&1; then
+            if [ "$FORCE" != "true" ]; then
+              echo "ERROR: El tag '$VERSION' ya existe."
+              echo "Si querés re-publicar esta versión, volvé a correr el workflow con la opción 'force' activada."
+              exit 1
+            fi
+            echo "Tag '$VERSION' ya existe. Se recrea porque 'force' está activada."
+            git tag -d "$VERSION"
+            git push origin --delete "$VERSION"
           fi
+
           git tag "$VERSION"
           git push origin "$VERSION"
 
@@ -202,7 +210,7 @@ jobs:
           path: dist
 
       - name: Delete existing release
-        if: github.event.inputs.force == true
+        if: ${{ github.event.inputs.force == true }}
         run: |
           VERSION="${{ needs.build.outputs.version }}"
           gh release delete "$VERSION" --yes || true
