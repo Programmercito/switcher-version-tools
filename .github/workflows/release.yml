@@ -184,16 +184,12 @@ jobs:
       - name: Publish to Chocolatey
         if: ${{ env.CHOCO_API_KEY != '' }}
         shell: bash
+        continue-on-error: true
         env:
           CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
         run: |
           VERSION="${{ needs.build.outputs.version }}"
           NUPKG="dist/swtool.${VERSION}.nupkg"
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://community.chocolatey.org/packages/swtool/${VERSION}")
-          if [ "$STATUS" == "200" ]; then
-            echo "La versión $VERSION ya existe en Chocolatey. Se omite el push."
-            exit 0
-          fi
           choco push "$NUPKG" \
             --source https://push.chocolatey.org/ \
             --api-key "$CHOCO_API_KEY"
@@ -201,7 +197,7 @@ jobs:
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build, chocolatey]
+    needs: build
     steps:
       - name: Download binaries
         uses: actions/download-artifact@v4
