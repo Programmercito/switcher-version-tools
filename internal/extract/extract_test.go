@@ -134,3 +134,42 @@ func createTarGz(t *testing.T, path string, entries []tarEntry) {
 		}
 	}
 }
+
+func TestExtractDetectsZipWithoutExtension(t *testing.T) {
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "switchtool-go-alias")
+	createZip(t, src, map[string]string{"go/bin/go.exe": "hello"})
+
+	dst := filepath.Join(tmp, "out")
+	if err := Extract(context.Background(), src, dst, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dst, "go", "bin", "go.exe")); err != nil {
+		t.Errorf("expected extracted file: %v", err)
+	}
+}
+
+func TestExtractDetectsTarGzWithoutExtension(t *testing.T) {
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "switchtool-node-alias")
+	createTarGz(t, src, []tarEntry{{Name: "node/node.exe", Typeflag: tar.TypeReg, Content: "hello", Mode: 0644}})
+
+	dst := filepath.Join(tmp, "out")
+	if err := Extract(context.Background(), src, dst, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dst, "node", "node.exe")); err != nil {
+		t.Errorf("expected extracted file: %v", err)
+	}
+}
+
+func TestExtractRejectsUnknownFormat(t *testing.T) {
+	tmp := t.TempDir()
+	src := filepath.Join(tmp, "notes")
+	if err := os.WriteFile(src, []byte("plain text"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := Extract(context.Background(), src, filepath.Join(tmp, "out"), nil); err == nil {
+		t.Fatal("expected error for unknown format")
+	}
+}

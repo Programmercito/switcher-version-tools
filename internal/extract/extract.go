@@ -16,17 +16,50 @@ import (
 type ProgressFunc func(current, total int, name string)
 
 // Extract descomprime src dentro de dst, soportando .zip, .tar.gz y .tgz.
+// El formato se detecta por el contenido del archivo y, si no es concluyente,
+// por la extensión.
 // Aplica protección contra zip-slip y rechaza enlaces simbólicos/duros por seguridad.
 func Extract(ctx context.Context, src, dst string, onProgress ProgressFunc) error {
-	lower := strings.ToLower(src)
-	switch {
-	case strings.HasSuffix(lower, ".zip"):
+	switch detectFormat(src) {
+	case formatZip:
 		return extractZip(ctx, src, dst, onProgress)
-	case strings.HasSuffix(lower, ".tar.gz"), strings.HasSuffix(lower, ".tgz"):
+	case formatTarGz:
 		return extractTarGz(ctx, src, dst, onProgress)
 	default:
 		return fmt.Errorf("formato de archivo no soportado: solo .zip, .tar.gz y .tgz")
 	}
+}
+
+type format int
+
+const (
+	formatUnknown format = iota
+	formatZip
+	formatTarGz
+)
+
+func detectFormat(path string) format {
+	if f, err := os.Open(path); err == nil {
+		var magic [4]byte
+		n, _ := io.ReadFull(f, magic[:])
+		f.Close()
+		switch {
+		case n >= 4 && magic[0] == 'P' && magic[1] == 'K' && magic[2] == 3 && magic[3] == 4,
+			n >= 4 && magic[0] == 'P' && magic[1] == 'K' && magic[2] == 5 && magic[3] == 6:
+			return formatZip
+		case n >= 2 && magic[0] == 0x1f && magic[1] == 0x8b:
+			return formatTarGz
+		}
+	}
+
+	lower := strings.ToLower(path)
+	switch {
+	case strings.HasSuffix(lower, ".zip"):
+		return formatZip
+	case strings.HasSuffix(lower, ".tar.gz"), strings.HasSuffix(lower, ".tgz"):
+		return formatTarGz
+	}
+	return formatUnknown
 }
 
 func extractZip(ctx context.Context, src, dst string, onProgress ProgressFunc) error {

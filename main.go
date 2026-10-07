@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -38,8 +39,12 @@ func main() {
 	cli.PrintLogo()
 
 	if len(os.Args) < 2 {
-		cli.ShowHelp(currentVersion)
-		os.Exit(1)
+		if !cli.IsInteractive() {
+			cli.ShowHelp(currentVersion)
+			os.Exit(1)
+		}
+		runInteractive(interactiveSwitch)
+		return
 	}
 
 	ui := cli.NewUI()
@@ -49,6 +54,12 @@ func main() {
 	arg1 := os.Args[1]
 
 	switch {
+	case arg1 == "use" && len(os.Args) == 2:
+		if !cli.IsInteractive() {
+			cli.Errorf("'use' requiere una terminal interactiva.\n")
+			os.Exit(1)
+		}
+		runInteractive(interactiveSwitch)
 	case arg1 == "help" || arg1 == "-h" || arg1 == "--help":
 		cli.ShowHelp(currentVersion)
 	case arg1 == "--version":
@@ -58,6 +69,8 @@ func main() {
 			cli.Errorf("Error: %v\n", err)
 			os.Exit(1)
 		}
+	case arg1 == "remove" && len(os.Args) == 2 && cli.IsInteractive():
+		runInteractive(interactiveRemove)
 	case arg1 == "remove":
 		if len(os.Args) != 3 {
 			cli.Errorf("'remove' requiere un alias.\n")
@@ -90,6 +103,58 @@ func main() {
 		cli.ShowHelp(currentVersion)
 		os.Exit(1)
 	}
+}
+
+// runInteractive ejecuta un flujo interactivo y maneja cancelación y errores.
+func runInteractive(flow func() error) {
+	err := flow()
+	switch {
+	case err == nil:
+	case errors.Is(err, cli.ErrCancelled):
+		cli.Mutedf("Cancelado.\n")
+	case errors.Is(err, cli.ErrNoInstalls):
+		cli.Mutedf("No hay instalaciones registradas.\n")
+		cli.Infof("Instala una con: switchtool <tipo> <alias> <url|path_zip>\n")
+	default:
+		cli.Errorf("Error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func interactiveSwitch() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	alias, err := cli.PickInstalled(cfg, "usar")
+	if err != nil {
+		return err
+	}
+	if err := switchToAlias(alias); err != nil {
+		return err
+	}
+	cli.ReloadNotice()
+	return nil
+}
+
+func interactiveRemove() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	alias, err := cli.PickInstalled(cfg, "eliminar")
+	if err != nil {
+		return err
+	}
+	ok, err := cli.Confirm(fmt.Sprintf("¿Eliminar '%s' del registro y del disco?", alias))
+	if err != nil {
+		return err
+	}
+	if !ok {
+		cli.Mutedf("Cancelado.\n")
+		return nil
+	}
+	return removeAlias(alias)
 }
 
 func install(ctx context.Context, ui *cli.UI, tipo, alias, source string) error {

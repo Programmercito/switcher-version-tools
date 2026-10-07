@@ -55,7 +55,17 @@ switchtool jdk17
 switchtool php8.2
 ```
 
-### 4. Listar lo que tienes instalado
+### 4. Modo interactivo (con las flechas)
+
+![Modo interactivo](images/interactivo.gif)
+```bash
+switchtool        # o: switchtool use
+```
+Elige el lenguaje y luego la versión instalada con `↑/↓` (o `j/k`), `Enter` para confirmar, `←` para volver, `/` para filtrar y `Esc` para salir. Si solo tienes un lenguaje (o una versión) se omite ese paso. La versión actual aparece marcada con `✓ actual`.
+
+Con `switchtool remove` (sin alias) se elige de la misma forma qué eliminar, con confirmación previa.
+
+### 5. Listar lo que tienes instalado
 ```bash
 switchtool list
 # o

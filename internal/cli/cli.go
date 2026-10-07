@@ -51,7 +51,7 @@ type UI struct {
 // NewUI crea una nueva interfaz con estilos y componentes listos.
 func NewUI() *UI {
 	p := progress.New(
-		progress.WithDefaultGradient(),
+		progress.WithGradient("#3F6B1C", "#C8FF4D"),
 		progress.WithWidth(40),
 	)
 	return &UI{progress: p}
@@ -72,9 +72,11 @@ func ShowHelp(version string) {
 	var b strings.Builder
 	b.WriteString(infoStyle.Render("Uso") + "\n")
 	b.WriteString("  switchtool <tipo> <alias> <url|path_zip>  Descargar o usar zip/tar.gz local e instalar\n")
+	b.WriteString("  switchtool | switchtool use                Elegir lenguaje y versión con las flechas\n")
 	b.WriteString("  switchtool <alias>                         Cambiar a una versión ya instalada\n")
 	b.WriteString("  switchtool list | ls                       Listar todas las instalaciones disponibles\n")
 	b.WriteString("  switchtool remove <alias>                  Eliminar un alias del registro y del disco\n")
+	b.WriteString("  switchtool remove                          Elegir con las flechas qué eliminar\n")
 	b.WriteString("  switchtool --version                       Mostrar versión\n\n")
 	b.WriteString("Tipos soportados: " + strings.Join(tool.Supported(), ", ") + "\n\n")
 	b.WriteString(warnStyle.Render("Ejemplos") + "\n")
@@ -88,35 +90,43 @@ func ShowHelp(version string) {
 	fmt.Println(boxStyle.Render(b.String()))
 }
 
+// printStyled aplica el estilo sin incluir los saltos de línea finales:
+// lipgloss rellena con espacios las líneas vacías y desalinea la salida siguiente.
+func printStyled(style lipgloss.Style, format string, a ...any) {
+	text := fmt.Sprintf(format, a...)
+	trimmed := strings.TrimRight(text, "\n")
+	fmt.Print(style.Render(trimmed) + text[len(trimmed):])
+}
+
 // Errorf imprime un mensaje de error.
 func Errorf(format string, a ...any) {
-	fmt.Printf(errorStyle.Render("✗ "+format), a...)
+	printStyled(errorStyle, "✗ "+format, a...)
 }
 
 // Successf imprime un mensaje de éxito.
 func Successf(format string, a ...any) {
-	fmt.Printf(successStyle.Render("✓ "+format), a...)
+	printStyled(successStyle, "✓ "+format, a...)
 }
 
 // Infof imprime un mensaje informativo.
 func Infof(format string, a ...any) {
-	fmt.Printf(infoStyle.Render("→ "+format), a...)
+	printStyled(infoStyle, "→ "+format, a...)
 }
 
 // Warnf imprime una advertencia.
 func Warnf(format string, a ...any) {
-	fmt.Printf(warnStyle.Render("⚡ "+format), a...)
+	printStyled(warnStyle, "⚡ "+format, a...)
 }
 
 // Mutedf imprime texto secundario.
 func Mutedf(format string, a ...any) {
-	fmt.Printf(mutedStyle.Render(format), a...)
+	printStyled(mutedStyle, format, a...)
 }
 
 // PrintDownloadProgress muestra la barra de progreso o el spinner.
 func (ui *UI) PrintDownloadProgress(downloaded, total int64) {
 	if total > 0 {
-		pct := float64(downloaded) / float64(total)
+		pct := min(float64(downloaded)/float64(total), 1)
 		fmt.Printf("\r%s %s", infoStyle.Render("Descargando"), ui.progress.ViewAs(pct))
 	} else {
 		frame := ui.nextSpinner()

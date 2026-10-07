@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -57,6 +58,9 @@ func download(ctx context.Context, urlStr, dest string, onProgress ProgressFunc)
 		return err
 	}
 
+	// Sin compresión el servidor informa Content-Length y se puede mostrar la barra.
+	req.Header.Set("Accept-Encoding", "identity")
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("fallo la descarga: %w", err)
@@ -75,12 +79,24 @@ func download(ctx context.Context, urlStr, dest string, onProgress ProgressFunc)
 
 	var r io.Reader = resp.Body
 	if onProgress != nil {
-		r = &progressReader{reader: resp.Body, total: resp.ContentLength, onProgress: onProgress}
+		r = &progressReader{reader: resp.Body, total: responseSize(resp), onProgress: onProgress}
 	}
 	if _, err := io.Copy(out, r); err != nil {
 		return fmt.Errorf("error al escribir descarga: %w", err)
 	}
 	return nil
+}
+
+// responseSize retorna el tamaño total, usando X-Identity-Content-Length
+// (que envía Google) cuando Content-Length no está disponible.
+func responseSize(resp *http.Response) int64 {
+	if resp.ContentLength > 0 {
+		return resp.ContentLength
+	}
+	if n, err := strconv.ParseInt(resp.Header.Get("X-Identity-Content-Length"), 10, 64); err == nil && n > 0 {
+		return n
+	}
+	return resp.ContentLength
 }
 
 func copyFile(src, dst string, onProgress ProgressFunc) error {
