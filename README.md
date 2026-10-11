@@ -14,13 +14,14 @@
 - **PHP**
 - **Go** (GOROOT)
 - **Node.js**
+- **pnpm** (PNPM_HOME)
 
 ## ✨ Características
 
 - **Descarga Automática**: Soporta URLs directas (Adoptium, Apache, etc.) o archivos locales.
 - **Formatos Soportados**: Extrae automáticamente archivos `.zip`, `.tar.gz` y `.tgz`.
 - **Gestión Inteligente de PATH**: Automatiza la limpieza y actualización del PATH de usuario mediante PowerShell.
-- **Variables de Entorno**: Setea automáticamente `JAVA_HOME`, `MAVEN_HOME`, `GRADLE_HOME`, `PHP_HOME`, `GOROOT`, y `NODE_HOME`.
+- **Variables de Entorno**: Setea automáticamente `JAVA_HOME`, `MAVEN_HOME`, `GRADLE_HOME`, `PHP_HOME`, `GOROOT`, `NODE_HOME`, y `PNPM_HOME`.
 - **Detección de Directorios**: Si el archivo comprimido tiene una carpeta raíz extra (común en JDKs), **switchtool** la detecta y entra en ella automáticamente.
 - **Interfaz Amigable**: Colores, barra de progreso y mensajes claros.
 
@@ -48,6 +49,13 @@ switchtool java jdk17 https://github.com/adoptium/temurin17-binaries/releases/do
 ```bash
 switchtool php 8.2 C:\Downloads\php-8.2.10-Win32-vs16-x64.zip
 ```
+
+### Instalar una versión de pnpm
+Instala la versión standalone directamente desde el ZIP oficial para Windows (incluye `pnpm.exe` y sus archivos de distribución):
+```bash
+switchtool pnpm v12.11.2 https://github.com/pnpm/pnpm/releases/download/v12.11.2/pnpm-win32-x64.zip
+```
+Después puedes cambiar de versión con `switchtool v12.11.2`. El directorio que contiene `pnpm.exe` se configura en `PNPM_HOME` y se agrega al `PATH`.
 
 ### 3. Cambiar entre versiones
 ```bash

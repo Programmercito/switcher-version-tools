@@ -7,7 +7,7 @@ import (
 )
 
 func TestRegistryContainsExpectedTools(t *testing.T) {
-	expected := []string{"java", "maven", "gradle", "php", "go", "node"}
+	expected := []string{"java", "maven", "gradle", "php", "go", "node", "pnpm"}
 	for _, name := range expected {
 		if _, ok := Get(name); !ok {
 			t.Errorf("Get(%q) not found", name)
@@ -77,6 +77,40 @@ func TestDetectRootPHPInSubdir(t *testing.T) {
 	}
 }
 
+func TestDetectRootPNPMInSubdir(t *testing.T) {
+	tmp := t.TempDir()
+	sub := filepath.Join(tmp, "pnpm")
+	if err := os.MkdirAll(sub, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "pnpm.exe"), []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := DetectRoot(Registry["pnpm"], tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != sub {
+		t.Errorf("DetectRoot = %s, want %s", got, sub)
+	}
+}
+
+func TestDetectRootPNPMAtRoot(t *testing.T) {
+	tmp := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmp, "pnpm.exe"), []byte(""), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := DetectRoot(Registry["pnpm"], tmp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != tmp {
+		t.Errorf("DetectRoot = %s, want %s", got, tmp)
+	}
+}
+
 func TestBinPath(t *testing.T) {
 	java := Registry["java"]
 	want := filepath.Join("C:\\java", "bin")
@@ -87,5 +121,10 @@ func TestBinPath(t *testing.T) {
 	php := Registry["php"]
 	if got := php.BinPath("C:\\php"); got != "C:\\php" {
 		t.Errorf("php BinPath = %s, want C:\\php", got)
+	}
+
+	pnpm := Registry["pnpm"]
+	if got := pnpm.BinPath("C:\\pnpm"); got != "C:\\pnpm" {
+		t.Errorf("pnpm BinPath = %s, want C:\\pnpm", got)
 	}
 }

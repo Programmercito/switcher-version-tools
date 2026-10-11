@@ -59,6 +59,12 @@ var Registry = map[string]Tool{
 		HomeVar:     "NODE_HOME",
 		BinRelative: ".",
 	},
+	"pnpm": {
+		Name:        "pnpm",
+		HomeVar:     "PNPM_HOME",
+		BinRelative: ".",
+		Executable:  "pnpm.exe",
+	},
 }
 
 // Supported retorna los nombres de tipos soportados.

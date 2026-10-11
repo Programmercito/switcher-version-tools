@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/progress"
@@ -63,14 +64,14 @@ func PrintLogo() {
 	for _, line := range strings.Split(logo, "\n") {
 		fmt.Println(titleStyle.Render(line))
 	}
-	fmt.Println(subtitleStyle.Render("  switchtool — gestiona versiones de Java/Maven/Gradle/PHP/Go/Node"))
+	fmt.Println(subtitleStyle.Render("  switchtool — gestiona versiones de Java/Maven/Gradle/PHP/Go/Node/pnpm"))
 	fmt.Println()
 }
 
 // ShowHelp imprime la ayuda dentro de un recuadro.
 func ShowHelp(version string) {
 	var b strings.Builder
-	b.WriteString(infoStyle.Render("Uso") + "\n")
+	b.WriteString(TitleStyle.Render("COMANDOS") + "\n")
 	b.WriteString("  switchtool <tipo> <alias> <url|path_zip>  Descargar o usar zip/tar.gz local e instalar\n")
 	b.WriteString("  switchtool | switchtool use                Elegir lenguaje y versión con las flechas\n")
 	b.WriteString("  switchtool <alias>                         Cambiar a una versión ya instalada\n")
@@ -78,16 +79,57 @@ func ShowHelp(version string) {
 	b.WriteString("  switchtool remove <alias>                  Eliminar un alias del registro y del disco\n")
 	b.WriteString("  switchtool remove                          Elegir con las flechas qué eliminar\n")
 	b.WriteString("  switchtool --version                       Mostrar versión\n\n")
-	b.WriteString("Tipos soportados: " + strings.Join(tool.Supported(), ", ") + "\n\n")
-	b.WriteString(warnStyle.Render("Ejemplos") + "\n")
+	b.WriteString(supportedToolsHelp())
+	b.WriteString("\n" + TitleStyle.Render("EJEMPLOS") + "\n")
 	b.WriteString("  switchtool java jdk17 https://.../jdk17.zip\n")
 	b.WriteString("  switchtool php 8.1 C:\\Downloads\\php-8.1.zip\n")
 	b.WriteString("  switchtool node v20 https://.../node-v20.tar.gz\n")
+	b.WriteString("  switchtool pnpm v12.11.2 <url|zip>\n")
 	if version != "" {
 		b.WriteString("\n" + mutedStyle.Render("Versión: "+version))
 	}
 
 	fmt.Println(boxStyle.Render(b.String()))
+}
+
+func supportedToolsHelp() string {
+	names := tool.Supported()
+	sort.Strings(names)
+
+	var b strings.Builder
+	b.WriteString(TitleStyle.Render("LENGUAJES Y HERRAMIENTAS SOPORTADAS") + "\n")
+	for _, name := range names {
+		t, ok := tool.Get(name)
+		if !ok {
+			continue
+		}
+
+		label := name
+		switch name {
+		case "java":
+			label = "Java (JDK)"
+		case "gradle":
+			label = "Gradle"
+		case "maven":
+			label = "Maven"
+		case "go":
+			label = "Go"
+		case "node":
+			label = "Node.js"
+		case "php":
+			label = "PHP"
+		}
+
+		homeVars := append([]string{t.HomeVar}, t.ExtraHomeVars...)
+		fmt.Fprintf(
+			&b,
+			"  %s %-14s %s\n",
+			SuccessStyle.Render("◆"),
+			TitleStyle.Render(fmt.Sprintf("%-14s", label)),
+			MutedStyle.Render(strings.Join(homeVars, ", ")),
+		)
+	}
+	return b.String()
 }
 
 // printStyled aplica el estilo sin incluir los saltos de línea finales:
