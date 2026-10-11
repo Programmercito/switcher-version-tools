@@ -6,7 +6,7 @@
 
 **switchtool** es un CLI potente y minimalista diseñado para desarrolladores que necesitan cambiar rápidamente entre versiones de sus herramientas favoritas en Windows. Olvida configurar el %PATH% manualmente o pelear con variables de entorno cada vez que cambias de proyecto.
 
-## 🌟 Lenguajes y Herramientas Soportadas
+## 🌟 Herramientas Soportadas
 
 - **Java** (JDK)
 - **Maven**
@@ -69,7 +69,7 @@ switchtool php8.2
 ```bash
 switchtool        # o: switchtool use
 ```
-Elige el lenguaje y luego la versión instalada con `↑/↓` (o `j/k`), `Enter` para confirmar, `←` para volver, `/` para filtrar y `Esc` para salir. Si solo tienes un lenguaje (o una versión) se omite ese paso. La versión actual aparece marcada con `✓ actual`.
+Elige la herramienta y luego la versión instalada con `↑/↓` (o `j/k`), `Enter` para confirmar, `←` para volver, `/` para filtrar y `Esc` para salir. Si solo tienes una herramienta (o una versión) se omite ese paso. La versión actual aparece marcada con `✓ actual`.
 
 Con `switchtool remove` (sin alias) se elige de la misma forma qué eliminar, con confirmación previa.
 

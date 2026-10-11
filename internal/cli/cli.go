@@ -37,7 +37,7 @@ var (
 	boxStyle      = BoxStyle
 )
 
-const logo = ` ____          _ _       _       _____           _ 
+const logo = ` ____          _ _       _       _____           _
 / ___|_      _(_) |_ ___| |__   |_   _|__   ___ | |
 \___ \ \ /\ / / | __/ __| '_ \    | |/ _ \ / _ \| |
  ___) \ V  V /| | || (__| | | |   | | (_) | (_) | |
@@ -64,7 +64,7 @@ func PrintLogo() {
 	for _, line := range strings.Split(logo, "\n") {
 		fmt.Println(titleStyle.Render(line))
 	}
-	fmt.Println(subtitleStyle.Render("  switchtool — gestiona versiones de Java/Maven/Gradle/PHP/Go/Node/pnpm"))
+	fmt.Println(subtitleStyle.Render("  developer environment version manager"))
 	fmt.Println()
 }
 
@@ -73,7 +73,7 @@ func ShowHelp(version string) {
 	var b strings.Builder
 	b.WriteString(TitleStyle.Render("COMANDOS") + "\n")
 	b.WriteString("  switchtool <tipo> <alias> <url|path_zip>  Descargar o usar zip/tar.gz local e instalar\n")
-	b.WriteString("  switchtool | switchtool use                Elegir lenguaje y versión con las flechas\n")
+	b.WriteString("  switchtool | switchtool use                Elegir herramienta y versión con las flechas\n")
 	b.WriteString("  switchtool <alias>                         Cambiar a una versión ya instalada\n")
 	b.WriteString("  switchtool list | ls                       Listar todas las instalaciones disponibles\n")
 	b.WriteString("  switchtool remove <alias>                  Eliminar un alias del registro y del disco\n")
@@ -97,7 +97,7 @@ func supportedToolsHelp() string {
 	sort.Strings(names)
 
 	var b strings.Builder
-	b.WriteString(TitleStyle.Render("LENGUAJES Y HERRAMIENTAS SOPORTADAS") + "\n")
+	b.WriteString(TitleStyle.Render("HERRAMIENTAS SOPORTADAS") + "\n")
 	for _, name := range names {
 		t, ok := tool.Get(name)
 		if !ok {

@@ -44,9 +44,9 @@ func versionsLabel(n int) string {
 	return fmt.Sprintf("%d versiones", n)
 }
 
-// PickInstalled deja elegir con las flechas el lenguaje y luego la versión
+// PickInstalled deja elegir con las flechas la herramienta y luego la versión
 // instalada, y retorna el alias elegido. Se omite el primer paso si solo hay
-// un lenguaje, y el segundo si ese lenguaje tiene una sola versión.
+// una herramienta, y el segundo si esa herramienta tiene una sola versión.
 func PickInstalled(cfg *config.Config, action string) (string, error) {
 	types, groups := groupByType(cfg.Downloads)
 	if len(types) == 0 {
@@ -60,7 +60,7 @@ func PickInstalled(cfg *config.Config, action string) (string, error) {
 			for i, t := range types {
 				items[i] = Item{Label: t, Value: t, Desc: "(" + versionsLabel(len(groups[t])) + ")"}
 			}
-			it, err := Select("Lenguaje a "+action, items, false)
+			it, err := Select("Herramienta a "+action, items, false)
 			if err != nil {
 				return "", err
 			}
