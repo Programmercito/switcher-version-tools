@@ -9,8 +9,9 @@ import (
 
 // Download representa una instalación registrada.
 type Download struct {
-	Alias string `json:"alias"`
-	Type  string `json:"type"`
+	Alias   string `json:"alias"`
+	Type    string `json:"type"`
+	Version string `json:"version,omitempty"`
 }
 
 // Config es la estructura persistente del usuario.
@@ -89,13 +90,17 @@ func Save(cfg *Config) error {
 }
 
 // AddDownload agrega una instalación si el alias no existe.
-func (c *Config) AddDownload(alias, toolType string) bool {
+func (c *Config) AddDownload(alias, toolType string, detectedVersion ...string) bool {
 	for _, d := range c.Downloads {
 		if d.Alias == alias {
 			return false
 		}
 	}
-	c.Downloads = append(c.Downloads, Download{Alias: alias, Type: toolType})
+	version := ""
+	if len(detectedVersion) > 0 {
+		version = detectedVersion[0]
+	}
+	c.Downloads = append(c.Downloads, Download{Alias: alias, Type: toolType, Version: version})
 	return true
 }
 

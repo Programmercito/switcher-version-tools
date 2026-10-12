@@ -37,6 +37,23 @@ func groupByType(downloads []config.Download) ([]string, map[string][]string) {
 	return types, groups
 }
 
+func downloadsByType(downloads []config.Download) ([]string, map[string][]config.Download) {
+	groups := make(map[string][]config.Download)
+	for _, d := range downloads {
+		groups[d.Type] = append(groups[d.Type], d)
+	}
+	types := make([]string, 0, len(groups))
+	for t, entries := range groups {
+		sort.Slice(entries, func(i, j int) bool {
+			return entries[i].Alias < entries[j].Alias
+		})
+		groups[t] = entries
+		types = append(types, t)
+	}
+	sort.Strings(types)
+	return types, groups
+}
+
 func versionsLabel(n int) string {
 	if n == 1 {
 		return "1 versión"
@@ -48,7 +65,7 @@ func versionsLabel(n int) string {
 // instalada, y retorna el alias elegido. Se omite el primer paso si solo hay
 // una herramienta, y el segundo si esa herramienta tiene una sola versión.
 func PickInstalled(cfg *config.Config, action string) (string, error) {
-	types, groups := groupByType(cfg.Downloads)
+	types, groups := downloadsByType(cfg.Downloads)
 	if len(types) == 0 {
 		return "", ErrNoInstalls
 	}
@@ -67,14 +84,19 @@ func PickInstalled(cfg *config.Config, action string) (string, error) {
 			toolType = it.Value
 		}
 
-		aliases := groups[toolType]
-		if len(aliases) == 1 {
-			return aliases[0], nil
+		downloads := groups[toolType]
+		if len(downloads) == 1 {
+			return downloads[0].Alias, nil
 		}
 
-		items := make([]Item, len(aliases))
-		for i, a := range aliases {
-			items[i] = Item{Label: a, Value: a, Current: cfg.Current[toolType] == a}
+		items := make([]Item, len(downloads))
+		for i, d := range downloads {
+			items[i] = Item{
+				Label:   d.Alias,
+				Value:   d.Alias,
+				Desc:    versionDescription(d.Version),
+				Current: cfg.Current[toolType] == d.Alias,
+			}
 		}
 		it, err := Select("Versión de "+toolType+" a "+action, items, len(types) > 1)
 		if errors.Is(err, ErrBack) {
@@ -85,4 +107,11 @@ func PickInstalled(cfg *config.Config, action string) (string, error) {
 		}
 		return it.Value, nil
 	}
+}
+
+func versionDescription(version string) string {
+	if version == "" {
+		return ""
+	}
+	return "versión " + version
 }

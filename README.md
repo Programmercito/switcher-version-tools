@@ -24,6 +24,7 @@
 - **Variables de Entorno**: Setea automáticamente `JAVA_HOME`, `MAVEN_HOME`, `GRADLE_HOME`, `PHP_HOME`, `GOROOT`, `NODE_HOME`, y `PNPM_HOME`.
 - **Detección de Directorios**: Si el archivo comprimido tiene una carpeta raíz extra (común en JDKs), **switchtool** la detecta y entra en ella automáticamente.
 - **Interfaz Amigable**: Colores, barra de progreso y mensajes claros.
+- **Versión Real**: Después de extraer cada herramienta ejecuta su comando nativo de versión y guarda el resultado en `downloads.json`. Los registros antiguos siguen siendo compatibles.
 
 ## 🛠 Instalación
 
@@ -78,6 +79,15 @@ Con `switchtool remove` (sin alias) se elige de la misma forma qué eliminar, co
 switchtool list
 # o
 switchtool ls
+```
+La lista muestra la versión real detectada cuando está disponible. En el JSON
+se guarda como el campo opcional `version`:
+```json
+{
+  "alias": "jdk17",
+  "type": "java",
+  "version": "17.0.9"
+}
 ```
 
 ## 📝 Notas de Windows

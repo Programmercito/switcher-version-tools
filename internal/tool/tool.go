@@ -15,6 +15,8 @@ type Tool struct {
 	BinRelative string
 	// Executable, si no está vacío, se usa para detectar el directorio raíz real.
 	Executable string
+	// VersionCommand contiene el ejecutable relativo al home y sus argumentos.
+	VersionCommand []string
 }
 
 // BinPath retorna la ruta que debe agregarse al PATH.
@@ -28,42 +30,54 @@ func (t Tool) BinPath(home string) string {
 // Registry contiene las herramientas soportadas.
 var Registry = map[string]Tool{
 	"java": {
-		Name:          "java",
-		HomeVar:       "JAVA_HOME",
-		ExtraHomeVars: []string{"JDK_HOME"},
-		BinRelative:   "bin",
+		Name:           "java",
+		HomeVar:        "JAVA_HOME",
+		ExtraHomeVars:  []string{"JDK_HOME"},
+		BinRelative:    "bin",
+		Executable:     "bin\\java.exe",
+		VersionCommand: []string{"bin\\java.exe", "-version"},
 	},
 	"maven": {
-		Name:        "maven",
-		HomeVar:     "MAVEN_HOME",
-		BinRelative: "bin",
+		Name:           "maven",
+		HomeVar:        "MAVEN_HOME",
+		BinRelative:    "bin",
+		Executable:     "bin\\mvn.cmd",
+		VersionCommand: []string{"bin\\mvn.cmd", "--version"},
 	},
 	"gradle": {
-		Name:        "gradle",
-		HomeVar:     "GRADLE_HOME",
-		BinRelative: "bin",
+		Name:           "gradle",
+		HomeVar:        "GRADLE_HOME",
+		BinRelative:    "bin",
+		Executable:     "bin\\gradle.bat",
+		VersionCommand: []string{"bin\\gradle.bat", "--version"},
 	},
 	"php": {
-		Name:        "php",
-		HomeVar:     "PHP_HOME",
-		BinRelative: ".",
-		Executable:  "php.exe",
+		Name:           "php",
+		HomeVar:        "PHP_HOME",
+		BinRelative:    ".",
+		Executable:     "php.exe",
+		VersionCommand: []string{"php.exe", "-v"},
 	},
 	"go": {
-		Name:        "go",
-		HomeVar:     "GOROOT",
-		BinRelative: "bin",
+		Name:           "go",
+		HomeVar:        "GOROOT",
+		BinRelative:    "bin",
+		Executable:     "bin\\go.exe",
+		VersionCommand: []string{"bin\\go.exe", "version"},
 	},
 	"node": {
-		Name:        "node",
-		HomeVar:     "NODE_HOME",
-		BinRelative: ".",
+		Name:           "node",
+		HomeVar:        "NODE_HOME",
+		BinRelative:    ".",
+		Executable:     "node.exe",
+		VersionCommand: []string{"node.exe", "--version"},
 	},
 	"pnpm": {
-		Name:        "pnpm",
-		HomeVar:     "PNPM_HOME",
-		BinRelative: ".",
-		Executable:  "pnpm.exe",
+		Name:           "pnpm",
+		HomeVar:        "PNPM_HOME",
+		BinRelative:    ".",
+		Executable:     "pnpm.exe",
+		VersionCommand: []string{"pnpm.exe", "--version"},
 	},
 }
 
@@ -105,6 +119,11 @@ func DetectRoot(tool Tool, targetDir string) (string, error) {
 					return candidate, nil
 				}
 			}
+		}
+		// Mantener la heurística histórica para paquetes incompletos o
+		// herramientas cuyo ejecutable tenga una ubicación no estándar.
+		if len(entries) == 1 && entries[0].IsDir() {
+			return filepath.Join(targetDir, entries[0].Name()), nil
 		}
 		return targetDir, nil
 	}

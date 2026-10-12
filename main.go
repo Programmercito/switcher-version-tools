@@ -193,6 +193,13 @@ func install(ctx context.Context, ui *cli.UI, tipo, alias, source string) error 
 	}
 	cli.Successf("Directorio principal detectado: %s\n", actualHome)
 
+	detectedVersion, err := tool.DetectVersion(ctx, t, actualHome)
+	if err != nil {
+		cli.Warnf("No se pudo detectar la versión real de %s: %v\n", tipo, err)
+	} else {
+		cli.Successf("Versión real detectada: %s\n", detectedVersion)
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -205,7 +212,7 @@ func install(ctx context.Context, ui *cli.UI, tipo, alias, source string) error 
 		}
 	}
 
-	if cfg.AddDownload(alias, tipo) {
+	if cfg.AddDownload(alias, tipo, detectedVersion) {
 		cli.Successf("Alias '%s' agregado a la configuración.\n", alias)
 	} else {
 		cli.Warnf("Alias '%s' ya existe en la configuración.\n", alias)
@@ -327,7 +334,11 @@ func listCurrent() error {
 		if current, ok := cfg.Current[d.Type]; ok && current == d.Alias {
 			marker = " " + cli.SuccessStyle.Render("✓ actual")
 		}
-		fmt.Printf("  • %s (%s)%s\n", d.Alias, d.Type, marker)
+		version := ""
+		if d.Version != "" {
+			version = " " + cli.MutedStyle.Render("versión "+d.Version)
+		}
+		fmt.Printf("  • %s (%s)%s%s\n", d.Alias, d.Type, version, marker)
 	}
 	return nil
 }
