@@ -146,3 +146,15 @@ func TestPickInstalledSingleEntrySkipsPrompts(t *testing.T) {
 		t.Fatalf("alias=%q err=%v", alias, err)
 	}
 }
+
+func TestInstalledDisplayPutsVersionBeforeAlias(t *testing.T) {
+	label, desc := installedDisplay(config.Download{Alias: "jdk17", Version: "17.0.9"})
+	if label != "17.0.9" || desc != "alias jdk17" {
+		t.Fatalf("display = (%q, %q), want (17.0.9, alias jdk17)", label, desc)
+	}
+
+	label, desc = installedDisplay(config.Download{Alias: "legacy"})
+	if label != "legacy" || desc != "" {
+		t.Fatalf("display without version = (%q, %q), want (legacy, empty)", label, desc)
+	}
+}

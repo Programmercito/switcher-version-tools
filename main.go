@@ -328,18 +328,7 @@ func listCurrent() error {
 		return nil
 	}
 
-	cli.Infof("Instalaciones disponibles:\n")
-	for _, d := range cfg.Downloads {
-		marker := ""
-		if current, ok := cfg.Current[d.Type]; ok && current == d.Alias {
-			marker = " " + cli.SuccessStyle.Render("✓ actual")
-		}
-		version := ""
-		if d.Version != "" {
-			version = " " + cli.MutedStyle.Render("versión "+d.Version)
-		}
-		fmt.Printf("  • %s (%s)%s%s\n", d.Alias, d.Type, version, marker)
-	}
+	cli.PrintDownloads(cfg)
 	return nil
 }
 

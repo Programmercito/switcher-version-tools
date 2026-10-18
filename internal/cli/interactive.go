@@ -91,10 +91,11 @@ func PickInstalled(cfg *config.Config, action string) (string, error) {
 
 		items := make([]Item, len(downloads))
 		for i, d := range downloads {
+			label, desc := installedDisplay(d)
 			items[i] = Item{
-				Label:   d.Alias,
+				Label:   label,
 				Value:   d.Alias,
-				Desc:    versionDescription(d.Version),
+				Desc:    desc,
 				Current: cfg.Current[toolType] == d.Alias,
 			}
 		}
@@ -109,9 +110,9 @@ func PickInstalled(cfg *config.Config, action string) (string, error) {
 	}
 }
 
-func versionDescription(version string) string {
-	if version == "" {
-		return ""
+func installedDisplay(d config.Download) (string, string) {
+	if d.Version != "" {
+		return d.Version, "alias " + d.Alias
 	}
-	return "versión " + version
+	return d.Alias, ""
 }

@@ -89,6 +89,8 @@ se guarda como el campo opcional `version`:
   "version": "17.0.9"
 }
 ```
+La salida se organiza por herramienta y muestra debajo de cada una la versión
+real primero, el alias después y cuál está activa.
 
 ## 📝 Notas de Windows
 Para que los cambios en las variables de entorno se reflejen en la terminal actual:

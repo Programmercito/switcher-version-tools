@@ -5,9 +5,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Programmercito/switcher-version-tools/internal/config"
+	"github.com/Programmercito/switcher-version-tools/internal/tool"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/Programmercito/switcher-version-tools/internal/tool"
 )
 
 // Tono verdoso monocromático.
@@ -163,6 +164,50 @@ func Warnf(format string, a ...any) {
 // Mutedf imprime texto secundario.
 func Mutedf(format string, a ...any) {
 	printStyled(mutedStyle, format, a...)
+}
+
+// PrintDownloads muestra las instalaciones agrupadas por herramienta.
+func PrintDownloads(cfg *config.Config) {
+	types, groups := downloadsByType(cfg.Downloads)
+	Infof("Instalaciones disponibles:\n")
+
+	for i, toolType := range types {
+		if i > 0 {
+			fmt.Println()
+		}
+		fmt.Printf("  %s %s\n",
+			TitleStyle.Render(toolDisplayName(toolType)),
+			MutedStyle.Render("· "+versionsLabel(len(groups[toolType]))),
+		)
+		for _, d := range groups[toolType] {
+			label := d.Alias
+			details := ""
+			if d.Version != "" {
+				label = d.Version
+				details = " · " + MutedStyle.Render("alias "+d.Alias)
+			}
+			marker := ""
+			if current, ok := cfg.Current[d.Type]; ok && current == d.Alias {
+				marker = " " + SuccessStyle.Render("✓ actual")
+			}
+			fmt.Printf("    • %s%s%s\n", label, details, marker)
+		}
+	}
+}
+
+func toolDisplayName(name string) string {
+	switch name {
+	case "java":
+		return "Java (JDK)"
+	case "node":
+		return "Node.js"
+	case "php":
+		return "PHP"
+	case "go":
+		return "Go"
+	default:
+		return strings.ToUpper(name[:1]) + name[1:]
+	}
 }
 
 // PrintDownloadProgress muestra la barra de progreso o el spinner.
