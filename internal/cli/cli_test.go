@@ -9,6 +9,7 @@ import (
 
 	"github.com/Programmercito/switcher-version-tools/internal/config"
 	"github.com/Programmercito/switcher-version-tools/internal/tool"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestSupportedToolsHelpIncludesRegisteredToolsAndHomeVariables(t *testing.T) {
@@ -65,6 +66,31 @@ func TestDownloadProgressIncludesSpeedAndETA(t *testing.T) {
 				t.Fatalf("progress = %q", out)
 			}
 		})
+	}
+}
+
+func TestReloadNoticeIsConcise(t *testing.T) {
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous := os.Stdout
+	os.Stdout = w
+	ReloadNotice()
+	os.Stdout = previous
+	if err := w.Close(); err != nil {
+		t.Fatal(err)
+	}
+	out, err := io.ReadAll(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := r.Close(); err != nil {
+		t.Fatal(err)
+	}
+	got := strings.TrimSpace(ansi.Strip(string(out)))
+	if got != "⚡ Cerrá y abrí la terminal para aplicar los cambios." {
+		t.Fatalf("notice = %q", got)
 	}
 }
 

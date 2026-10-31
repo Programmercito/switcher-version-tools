@@ -290,8 +290,5 @@ func formatBytes(n int64) string {
 // ReloadNotice imprime la nota final sobre refrescar la terminal.
 func ReloadNotice() {
 	fmt.Println()
-	fmt.Println(warnStyle.Render("IMPORTANTE:") + " Los cambios no modifican automáticamente el entorno de esta terminal.")
-	fmt.Println("  PowerShell (en esta sesión):")
-	fmt.Println(`    'JAVA_HOME','JDK_HOME','MAVEN_HOME','GRADLE_HOME','PHP_HOME','GOROOT','NODE_HOME','PNPM_HOME' | ForEach-Object { $v = [Environment]::GetEnvironmentVariable($_,'User'); if (-not $v) { $v = [Environment]::GetEnvironmentVariable($_,'Machine') }; [Environment]::SetEnvironmentVariable($_,$v,'Process') }; $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`)
-	fmt.Println("  CMD: cerrá esta ventana y abrí otra para cargar todas las variables.")
+	Warnf("Cerrá y abrí la terminal para aplicar los cambios.\n")
 }
