@@ -2,8 +2,10 @@ package cli
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Programmercito/switcher-version-tools/internal/config"
 	"github.com/Programmercito/switcher-version-tools/internal/tool"
@@ -46,8 +48,10 @@ const logo = ` ____          _ _       _       _____           _
 
 // UI agrupa componentes interactivos de la interfaz.
 type UI struct {
-	progress     progress.Model
-	spinnerFrame int
+	progress       progress.Model
+	spinnerFrame   int
+	downloadStart  time.Time
+	lastDownloaded int64
 }
 
 // NewUI crea una nueva interfaz con estilos y componentes listos.
@@ -77,6 +81,10 @@ func ShowHelp(version string) {
 	b.WriteString("  switchtool | switchtool use                Elegir herramienta y versión con las flechas\n")
 	b.WriteString("  switchtool <alias>                         Cambiar a una versión ya instalada\n")
 	b.WriteString("  switchtool list | ls                       Listar todas las instalaciones disponibles\n")
+	b.WriteString("  switchtool list [--json | --quiet]         Salida para scripts\n")
+	b.WriteString("  switchtool doctor                          Diagnosticar instalaciones y entorno\n")
+	b.WriteString("  switchtool project use                     Activar versiones de switchtool.json\n")
+	b.WriteString("  --no-color                                 Desactivar colores\n")
 	b.WriteString("  switchtool remove <alias>                  Eliminar un alias del registro y del disco\n")
 	b.WriteString("  switchtool remove                          Elegir con las flechas qué eliminar\n")
 	b.WriteString("  switchtool --version                       Mostrar versión\n\n")
@@ -167,7 +175,7 @@ func Mutedf(format string, a ...any) {
 }
 
 // PrintDownloads muestra las instalaciones agrupadas por herramienta.
-func PrintDownloads(cfg *config.Config) {
+func PrintDownloads(cfg *config.Config, dir string) {
 	types, groups := downloadsByType(cfg.Downloads)
 	Infof("Instalaciones disponibles:\n")
 
@@ -191,6 +199,7 @@ func PrintDownloads(cfg *config.Config) {
 				marker = " " + SuccessStyle.Render("✓ actual")
 			}
 			fmt.Printf("    • %s%s%s\n", label, details, marker)
+			fmt.Printf("      %s\n", MutedStyle.Render(filepath.Join(dir, d.Alias)))
 		}
 	}
 }
@@ -212,12 +221,26 @@ func toolDisplayName(name string) string {
 
 // PrintDownloadProgress muestra la barra de progreso o el spinner.
 func (ui *UI) PrintDownloadProgress(downloaded, total int64) {
+	now := time.Now()
+	if downloaded == 0 && !ui.downloadStart.IsZero() {
+		fmt.Print("\nReintentando descarga...\n")
+	}
+	if ui.downloadStart.IsZero() || downloaded < ui.lastDownloaded {
+		ui.downloadStart = now
+	}
+	ui.lastDownloaded = downloaded
+	speed := float64(downloaded) / max(now.Sub(ui.downloadStart).Seconds(), 0.001)
+	details := fmt.Sprintf("%s/s", formatBytes(int64(speed)))
+	if total > 0 && speed > 0 {
+		remaining := time.Duration(float64(max(total-downloaded, 0))/speed) * time.Second
+		details += " · restante " + remaining.String()
+	}
 	if total > 0 {
 		pct := min(float64(downloaded)/float64(total), 1)
-		fmt.Printf("\r%s %s", infoStyle.Render("Descargando"), ui.progress.ViewAs(pct))
+		fmt.Printf("\r%s %s %s     ", infoStyle.Render("Descargando"), ui.progress.ViewAs(pct), details)
 	} else {
 		frame := ui.nextSpinner()
-		fmt.Printf("\r%s %s %s descargados", infoStyle.Render("Descargando"), frame, formatBytes(downloaded))
+		fmt.Printf("\r%s %s %s descargados · %s     ", infoStyle.Render("Descargando"), frame, formatBytes(downloaded), details)
 	}
 }
 
@@ -260,14 +283,15 @@ func formatBytes(n int64) string {
 		div *= unit
 		exp++
 	}
-	suffix := []string{"KB", "MB", "GB", "TB"}[exp]
+	suffix := []string{"KB", "MB", "GB", "TB", "PB", "EB"}[exp]
 	return fmt.Sprintf("%.2f %s", float64(n)/float64(div), suffix)
 }
 
 // ReloadNotice imprime la nota final sobre refrescar la terminal.
 func ReloadNotice() {
 	fmt.Println()
-	fmt.Println(warnStyle.Render("IMPORTANTE:") + " Para que los cambios surtan efecto en la terminal actual:")
-	fmt.Println("  1. Cerrá y abrí la terminal.")
-	fmt.Println("  2. O ejecutá: " + infoStyle.Render("refreshenv") + mutedStyle.Render(" (si tenés Chocolatey)."))
+	fmt.Println(warnStyle.Render("IMPORTANTE:") + " Los cambios no modifican automáticamente el entorno de esta terminal.")
+	fmt.Println("  PowerShell (en esta sesión):")
+	fmt.Println(`    'JAVA_HOME','JDK_HOME','MAVEN_HOME','GRADLE_HOME','PHP_HOME','GOROOT','NODE_HOME','PNPM_HOME' | ForEach-Object { $v = [Environment]::GetEnvironmentVariable($_,'User'); if (-not $v) { $v = [Environment]::GetEnvironmentVariable($_,'Machine') }; [Environment]::SetEnvironmentVariable($_,$v,'Process') }; $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`)
+	fmt.Println("  CMD: cerrá esta ventana y abrí otra para cargar todas las variables.")
 }

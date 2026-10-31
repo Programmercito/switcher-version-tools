@@ -25,6 +25,7 @@
 - **Detección de Directorios**: Si el archivo comprimido tiene una carpeta raíz extra (común en JDKs), **switchtool** la detecta y entra en ella automáticamente.
 - **Interfaz Amigable**: Colores, barra de progreso y mensajes claros.
 - **Versión Real**: Después de extraer cada herramienta ejecuta su comando nativo de versión y guarda el resultado en `downloads.json`. Los registros antiguos siguen siendo compatibles.
+- **Diagnóstico**: Detecta instalaciones ausentes, variables incorrectas y conflictos con el PATH de la terminal.
 
 ## 🛠 Instalación
 
@@ -70,7 +71,7 @@ switchtool php8.2
 ```bash
 switchtool        # o: switchtool use
 ```
-Elige la herramienta y luego la versión instalada con `↑/↓` (o `j/k`), `Enter` para confirmar, `←` para volver, `/` para filtrar y `Esc` para salir. Si solo tienes una herramienta (o una versión) se omite ese paso. La versión actual aparece marcada con `✓ actual`.
+Elige la herramienta y luego la versión instalada con `↑/↓` (o `j/k`), `Enter` para confirmar, `←` para volver, `/` para filtrar por versión o alias y `Esc` para salir. Si solo tienes una herramienta (o una versión) se omite ese paso. La versión actual aparece marcada con `✓ actual`.
 
 Con `switchtool remove` (sin alias) se elige de la misma forma qué eliminar, con confirmación previa.
 
@@ -89,13 +90,72 @@ se guarda como el campo opcional `version`:
   "version": "17.0.9"
 }
 ```
-La salida se organiza por herramienta y muestra debajo de cada una la versión
-real primero, el alias después y cuál está activa.
+La salida se organiza por herramienta y muestra la versión real, el alias, la
+ruta del directorio registrado y cuál está activa.
+
+Para scripts:
+```bash
+switchtool list --json   # array con alias, type, version (si se detectó), path y current
+switchtool list --quiet  # un alias por línea
+switchtool --version     # solo la versión de switchtool
+switchtool --no-color list
+```
+`--json` y `--quiet` son opciones alternativas de `list`; `--no-color` se puede
+usar con cualquier comando.
+
+### 6. Diagnosticar el entorno
+```bash
+switchtool doctor
+```
+Comprueba los ejecutables y las versiones registradas, las variables de usuario
+y de la terminal actual, y qué ejecutable se encuentra primero en el PATH de
+esa terminal. Devuelve un código de salida distinto de cero si encuentra
+problemas. Si acabas de cambiar de versión, actualiza o abre otra terminal antes
+de interpretar los avisos sobre el entorno de la sesión.
+
+### 7. Activar versiones de un proyecto
+
+Crea `switchtool.json` en el directorio desde el que ejecutarás el comando:
+```json
+{
+  "tools": {
+    "java": "jdk17",
+    "node": "node20"
+  }
+}
+```
+Los alias deben estar instalados previamente para sus respectivas herramientas.
+Actívalos de forma explícita con:
+```bash
+switchtool project use
+```
+Esto modifica las versiones **globales de usuario en Windows**, igual que
+`switchtool <alias>`; no se activa automáticamente al entrar al directorio.
+Las instalaciones se validan antes de empezar. Si falla un cambio de entorno
+durante la activación, los cambios anteriores podrían haber quedado aplicados.
+
+Las descargas muestran velocidad y tiempo estimado cuando se conoce el tamaño.
+Ante errores transitorios de red, HTTP 429 o errores HTTP 5xx, se reintentan
+hasta tres veces desde el inicio; no se reanudan descargas parciales.
 
 ## 📝 Notas de Windows
-Para que los cambios en las variables de entorno se reflejen en la terminal actual:
-1. Recomendamos usar **Chocolatey** y ejecutar `refreshenv`.
-2. O simplemente cierra y abre tu terminal (PowerShell, CMD o Windows Terminal).
+Los cambios persistidos no se aplican automáticamente a la terminal que ejecutó
+el comando. En PowerShell puedes actualizar esta sesión sin Chocolatey:
+
+```powershell
+'JAVA_HOME', 'JDK_HOME', 'MAVEN_HOME', 'GRADLE_HOME', 'PHP_HOME', 'GOROOT', 'NODE_HOME', 'PNPM_HOME' | ForEach-Object {
+    $value = [Environment]::GetEnvironmentVariable($_, 'User')
+    if (-not $value) { $value = [Environment]::GetEnvironmentVariable($_, 'Machine') }
+    [Environment]::SetEnvironmentVariable($_, $value, 'Process')
+}
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+```
+
+Esto reemplaza el PATH de la sesión por los valores persistidos de máquina y
+usuario; las entradas agregadas solo a la sesión actual se perderán.
+
+En CMD, cierra la ventana y abre otra. También puedes abrir una nueva terminal
+de PowerShell o Windows Terminal para cargar los valores persistidos.
 
 ## 🤝 Contribuir
 ¡Toda ayuda es bienvenida! Si quieres añadir soporte para más herramientas o mejorar la lógica de extracción, abre un Issue o envía un Pull Request.

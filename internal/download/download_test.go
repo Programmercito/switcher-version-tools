@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 )
 
@@ -57,7 +58,9 @@ func TestFetchRemoteFile(t *testing.T) {
 }
 
 func TestFetchRemoteNotFound(t *testing.T) {
+	var requests atomic.Int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests.Add(1)
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer srv.Close()
@@ -67,6 +70,65 @@ func TestFetchRemoteNotFound(t *testing.T) {
 	_, err := Fetch(context.Background(), srv.URL, dst, nil)
 	if err == nil {
 		t.Error("expected error for 404, got nil")
+	}
+	if requests.Load() != 1 {
+		t.Errorf("requests = %d, want 1", requests.Load())
+	}
+}
+
+func TestFetchRetriesTransientStatus(t *testing.T) {
+	var requests atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if requests.Add(1) == 1 {
+			http.Error(w, "temporary", http.StatusServiceUnavailable)
+			return
+		}
+		_, _ = w.Write([]byte("complete"))
+	}))
+	defer srv.Close()
+	dst := filepath.Join(t.TempDir(), "out")
+	cleanup, err := Fetch(context.Background(), srv.URL, dst, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	got, err := os.ReadFile(dst)
+	if err != nil || string(got) != "complete" || requests.Load() != 2 {
+		t.Fatalf("content=%q requests=%d error=%v", got, requests.Load(), err)
+	}
+}
+
+func TestRetryableStatuses(t *testing.T) {
+	for _, tt := range []struct {
+		status int
+		want   bool
+	}{
+		{http.StatusTooManyRequests, true},
+		{http.StatusServiceUnavailable, true},
+		{http.StatusInternalServerError, true},
+		{http.StatusNotFound, false},
+		{http.StatusForbidden, false},
+	} {
+		if got := retryable(statusError(tt.status)); got != tt.want {
+			t.Errorf("status %d: retryable = %v, want %v", tt.status, got, tt.want)
+		}
+	}
+}
+
+func TestFetchCancelDuringRetry(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cancel()
+		http.Error(w, "temporary", http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+	dst := filepath.Join(t.TempDir(), "out")
+	_, err := Fetch(ctx, srv.URL, dst, nil)
+	if err == nil {
+		t.Fatal("expected cancellation")
+	}
+	if _, err := os.Stat(dst); !os.IsNotExist(err) {
+		t.Fatalf("partial download remains: %v", err)
 	}
 }
 

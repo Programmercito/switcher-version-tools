@@ -3,6 +3,7 @@
 package env
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -17,6 +18,25 @@ func init() {
 	systemAddToPath = psAddToPath
 	systemRemoveFromPath = psRemoveFromPath
 	systemReloadPath = psReloadPath
+	systemSnapshot = psSnapshot
+}
+
+func psSnapshot(names []string) (Snapshot, error) {
+	script := `$vars = @{}; $env:SWTOOL_NAMES.Split(';') | ForEach-Object { if ($_ -ne '') { $vars[$_] = [Environment]::GetEnvironmentVariable($_, 'User') } }; @{ user = $vars; machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine') } | ConvertTo-Json -Compress`
+	out, err := psRun(script, "SWTOOL_NAMES="+strings.Join(names, ";"))
+	if err != nil {
+		return Snapshot{}, fmt.Errorf("leer variables persistidas: %w", err)
+	}
+	var snapshot Snapshot
+	if err := json.Unmarshal([]byte(out), &snapshot); err != nil {
+		return Snapshot{}, fmt.Errorf("interpretar variables persistidas: %w", err)
+	}
+	snapshot.ProcessPath = os.Getenv("PATH")
+	snapshot.Process = make(map[string]string, len(names))
+	for _, name := range names {
+		snapshot.Process[name] = os.Getenv(name)
+	}
+	return snapshot, nil
 }
 
 func powershell() string {

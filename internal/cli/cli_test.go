@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"io"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Programmercito/switcher-version-tools/internal/config"
 	"github.com/Programmercito/switcher-version-tools/internal/tool"
@@ -16,6 +19,7 @@ func TestSupportedToolsHelpIncludesRegisteredToolsAndHomeVariables(t *testing.T)
 		if !ok {
 			t.Fatalf("tool %q is not registered", name)
 		}
+
 		if !strings.Contains(output, registered.HomeVar) {
 			t.Errorf("supported tools help does not include %s", registered.HomeVar)
 		}
@@ -24,6 +28,43 @@ func TestSupportedToolsHelpIncludesRegisteredToolsAndHomeVariables(t *testing.T)
 				t.Errorf("supported tools help does not include %s", homeVar)
 			}
 		}
+	}
+}
+
+func TestDownloadProgressIncludesSpeedAndETA(t *testing.T) {
+	for _, tt := range []struct {
+		name    string
+		total   int64
+		wantETA bool
+	}{
+		{"known size", 1024, true},
+		{"unknown size", 0, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r, w, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			previous := os.Stdout
+			os.Stdout = w
+			ui := NewUI()
+			ui.downloadStart = time.Now().Add(-time.Second)
+			ui.PrintDownloadProgress(512, tt.total)
+			os.Stdout = previous
+			if err := w.Close(); err != nil {
+				t.Fatal(err)
+			}
+			out, err := io.ReadAll(r)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := r.Close(); err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(out), "/s") || strings.Contains(string(out), "restante") != tt.wantETA {
+				t.Fatalf("progress = %q", out)
+			}
+		})
 	}
 }
 

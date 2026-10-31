@@ -3,10 +3,12 @@ package cli
 import (
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/Programmercito/switcher-version-tools/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 func key(t tea.KeyType) tea.KeyMsg { return tea.KeyMsg{Type: t} }
@@ -90,6 +92,31 @@ func TestSelectFilter(t *testing.T) {
 	m = press(m, key(tea.KeyEnter))
 	if m.chosen == nil || m.chosen.Value != "jdk21" {
 		t.Fatalf("chosen = %+v, want jdk21", m.chosen)
+	}
+}
+
+func TestSelectFilterVersionAndAlias(t *testing.T) {
+	items := []Item{{Label: "17.0.9", Value: "jdk17", Desc: "alias jdk17"}, {Label: "21.0.1", Value: "jdk21"}}
+	for _, query := range []string{"17.0", "JDK17"} {
+		t.Run(query, func(t *testing.T) {
+			m := press(newSelectModel("t", items, false), runes("/"), runes(query), key(tea.KeyEnter))
+			if m.chosen == nil || m.chosen.Value != "jdk17" {
+				t.Fatalf("chosen = %+v", m.chosen)
+			}
+		})
+	}
+}
+
+func TestSelectFitsNarrowTerminal(t *testing.T) {
+	for _, width := range []int{24, 6, 3, 1} {
+		m := press(newSelectModel("Una herramienta con nombre muy largo", []Item{
+			{Label: "17.0.9", Value: "un-alias-muy-largo", Desc: "alias un-alias-muy-largo"},
+		}, false), tea.WindowSizeMsg{Width: width, Height: 20})
+		for _, line := range strings.Split(m.View(), "\n") {
+			if got := lipgloss.Width(line); got > width {
+				t.Fatalf("line width = %d, want <= %d: %q", got, width, line)
+			}
+		}
 	}
 }
 

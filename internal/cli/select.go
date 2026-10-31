@@ -7,6 +7,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 // Errores devueltos por Select.
@@ -38,6 +39,7 @@ type selectModel struct {
 	chosen    *Item
 	err       error
 	done      bool
+	width     int
 }
 
 func newSelectModel(title string, items []Item, allowBack bool) selectModel {
@@ -62,7 +64,7 @@ func (m *selectModel) refilter() {
 	m.filtered = m.filtered[:0]
 	q := strings.ToLower(m.filter)
 	for i, it := range m.items {
-		if it.back || q == "" || strings.Contains(strings.ToLower(it.Label), q) {
+		if it.back || q == "" || strings.Contains(strings.ToLower(it.Label+" "+it.Value+" "+it.Desc), q) {
 			m.filtered = append(m.filtered, i)
 		}
 	}
@@ -96,6 +98,10 @@ func (m *selectModel) quit(err error) (tea.Model, tea.Cmd) {
 func (m selectModel) Init() tea.Cmd { return nil }
 
 func (m selectModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		m.width = size.Width
+		return m, nil
+	}
 	km, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return m, nil
@@ -233,17 +239,33 @@ func (m selectModel) renderBox() string {
 	for _, p := range plain {
 		width = max(width, lipgloss.Width(p)+2)
 	}
+	box := selectBoxStyle
+	if m.width > 0 && m.width < 7 {
+		box = lipgloss.NewStyle()
+		if m.width >= 3 {
+			box = box.Border(lipgloss.RoundedBorder()).BorderForeground(monoColor)
+			width = max(1, m.width-2)
+		} else {
+			width = m.width
+		}
+	} else if m.width > 0 {
+		width = min(width, m.width-6)
+	}
 
 	for k := range rows {
+		plain[k] = ansi.Truncate(plain[k], width, "…")
 		if m.offset+k == m.cursor {
 			rows[k] = selectedRowStyle.Width(width).Render("❯ " + strings.TrimPrefix(plain[k], "  "))
+			rows[k] = ansi.Truncate(rows[k], width, "")
+		} else {
+			rows[k] = ansi.Truncate(rows[k], width, "…")
 		}
 	}
 
 	var b strings.Builder
-	b.WriteString(infoStyle.Render("▍") + titleStyle.Render(m.title) + "\n")
+	b.WriteString(ansi.Truncate(infoStyle.Render("▍")+titleStyle.Render(m.title), width, "…") + "\n")
 	if m.filtering {
-		b.WriteString(mutedStyle.Render("filtro › ") + m.filter + infoStyle.Render("█") + "\n")
+		b.WriteString(ansi.Truncate(mutedStyle.Render("filtro › ")+m.filter+infoStyle.Render("█"), width, "…") + "\n")
 	}
 	b.WriteString("\n")
 	if len(rows) == 0 {
@@ -253,9 +275,9 @@ func (m selectModel) renderBox() string {
 	if len(m.filtered) > maxVisibleItems {
 		b.WriteString("\n" + mutedStyle.Render(fmt.Sprintf("  %d/%d", m.cursor+1, len(m.filtered))))
 	}
-	b.WriteString("\n\n" + mutedStyle.Render(hint))
+	b.WriteString("\n\n" + ansi.Truncate(mutedStyle.Render(hint), width, "…"))
 
-	return selectBoxStyle.Width(width+4).Render(b.String()) + "\n"
+	return box.Width(width).Render(b.String()) + "\n"
 }
 
 // Select muestra una lista navegable con las flechas y retorna el item elegido.

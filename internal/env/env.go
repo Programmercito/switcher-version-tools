@@ -12,7 +12,30 @@ var (
 	systemAddToPath      = func(path string) error { return nil }
 	systemRemoveFromPath = func(path string) error { return nil }
 	systemReloadPath     = func() error { return nil }
+	systemSnapshot       = processSnapshot
 )
+
+// Snapshot describe las variables persistidas y el PATH efectivo del proceso.
+type Snapshot struct {
+	User        map[string]string `json:"user"`
+	MachinePath string            `json:"machinePath"`
+	ProcessPath string            `json:"-"`
+	Process     map[string]string `json:"-"`
+}
+
+func processSnapshot(names []string) (Snapshot, error) {
+	s := Snapshot{User: make(map[string]string), Process: make(map[string]string), ProcessPath: os.Getenv("PATH")}
+	for _, name := range names {
+		s.User[name] = os.Getenv(name)
+		s.Process[name] = os.Getenv(name)
+	}
+	return s, nil
+}
+
+// ReadSnapshot lee el entorno persistido y el entorno de esta terminal.
+func ReadSnapshot(names []string) (Snapshot, error) {
+	return systemSnapshot(names)
+}
 
 // Set persiste una variable de entorno (si la plataforma lo permite)
 // y la refleja en el proceso actual.

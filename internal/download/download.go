@@ -2,8 +2,10 @@ package download
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,6 +16,7 @@ import (
 )
 
 const defaultTimeout = 30 * time.Minute
+const maxAttempts = 3
 
 // ProgressFunc recibe bytes descargados y el total conocido.
 // Si total es negativo o cero, el tamaño es desconocido.
@@ -31,6 +34,7 @@ func Fetch(ctx context.Context, source, dest string, onProgress ProgressFunc) (c
 			return cleanup, fmt.Errorf("URL inválida: %w", err)
 		}
 		if err := download(ctx, source, dest, onProgress); err != nil {
+			_ = os.Remove(dest)
 			return cleanup, err
 		}
 		cleanup = func() { _ = os.Remove(dest) }
@@ -53,6 +57,45 @@ func Fetch(ctx context.Context, source, dest string, onProgress ProgressFunc) (c
 
 func download(ctx context.Context, urlStr, dest string, onProgress ProgressFunc) error {
 	client := &http.Client{Timeout: defaultTimeout}
+	var err error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if attempt > 0 {
+			timer := time.NewTimer(time.Duration(attempt) * time.Second)
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return ctx.Err()
+			case <-timer.C:
+			}
+			if onProgress != nil {
+				onProgress(0, 0)
+			}
+		}
+		err = downloadOnce(ctx, client, urlStr, dest, onProgress)
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if err == nil || !retryable(err) {
+			return err
+		}
+	}
+	return fmt.Errorf("descarga fallida después de %d intentos: %w", maxAttempts, err)
+}
+
+type statusError int
+
+func (e statusError) Error() string { return fmt.Sprintf("código de estado %d", e) }
+
+func retryable(err error) bool {
+	var status statusError
+	if errors.As(err, &status) {
+		return status == http.StatusTooManyRequests || status >= 500
+	}
+	var networkError net.Error
+	return errors.As(err, &networkError) || errors.Is(err, io.ErrUnexpectedEOF)
+}
+
+func downloadOnce(ctx context.Context, client *http.Client, urlStr, dest string, onProgress ProgressFunc) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, urlStr, nil)
 	if err != nil {
 		return err
@@ -68,21 +111,23 @@ func download(ctx context.Context, urlStr, dest string, onProgress ProgressFunc)
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("código de estado %d", resp.StatusCode)
+		return statusError(resp.StatusCode)
 	}
 
 	out, err := os.Create(dest)
 	if err != nil {
 		return fmt.Errorf("no se pudo crear archivo temporal: %w", err)
 	}
-	defer out.Close()
-
 	var r io.Reader = resp.Body
 	if onProgress != nil {
 		r = &progressReader{reader: resp.Body, total: responseSize(resp), onProgress: onProgress}
 	}
 	if _, err := io.Copy(out, r); err != nil {
+		_ = out.Close()
 		return fmt.Errorf("error al escribir descarga: %w", err)
+	}
+	if err := out.Close(); err != nil {
+		return fmt.Errorf("error al cerrar descarga: %w", err)
 	}
 	return nil
 }
