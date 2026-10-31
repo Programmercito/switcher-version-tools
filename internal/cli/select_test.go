@@ -9,6 +9,8 @@ import (
 	"github.com/Programmercito/switcher-version-tools/internal/config"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
+	"github.com/muesli/termenv"
 )
 
 func key(t tea.KeyType) tea.KeyMsg { return tea.KeyMsg{Type: t} }
@@ -115,6 +117,48 @@ func TestSelectFitsNarrowTerminal(t *testing.T) {
 		for _, line := range strings.Split(m.View(), "\n") {
 			if got := lipgloss.Width(line); got > width {
 				t.Fatalf("line width = %d, want <= %d: %q", got, width, line)
+			}
+		}
+	}
+}
+
+func TestSelectKeepsItemsOnConsecutiveLines(t *testing.T) {
+	profile := lipgloss.ColorProfile()
+	lipgloss.SetColorProfile(termenv.TrueColor)
+	t.Cleanup(func() { lipgloss.SetColorProfile(profile) })
+
+	items := []Item{
+		{Label: "go", Value: "go", Desc: "(7 versiones)"},
+		{Label: "java", Value: "java", Desc: "(1 versión)"},
+		{Label: "node", Value: "node", Desc: "(1 versión)"},
+		{Label: "php", Value: "php", Desc: "(2 versiones)"},
+	}
+	for _, width := range []int{0, 24, 32, 56, 80} {
+		for selected := range items {
+			m := newSelectModel("Herramienta a usar", items, false)
+			m.cursor = selected
+			m = press(m, tea.WindowSizeMsg{Width: width, Height: 20})
+			lines := strings.Split(ansi.Strip(m.View()), "\n")
+			previous := -1
+			for _, item := range items {
+				found := -1
+				for i, line := range lines {
+					if strings.Contains(line, item.Label) {
+						if found != -1 {
+							t.Fatalf("width=%d selected=%d: %s appears twice:\n%s", width, selected, item.Label, m.View())
+						}
+						found = i
+					}
+				}
+				if found == -1 || previous >= 0 && found != previous+1 {
+					t.Fatalf("width=%d selected=%d: %s not on the next line:\n%s", width, selected, item.Label, m.View())
+				}
+				previous = found
+			}
+			for _, line := range lines {
+				if width > 0 && lipgloss.Width(line) > width {
+					t.Fatalf("width=%d selected=%d: line is too wide: %q", width, selected, line)
+				}
 			}
 		}
 	}

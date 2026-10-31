@@ -26,7 +26,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
-      sha256: ${{ steps.checksums.outputs.sha256 }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -73,12 +72,6 @@ jobs:
           GOOS=windows GOARCH=amd64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool.exe .
           GOOS=windows GOARCH=arm64 go build -ldflags "-X main.version=$VERSION" -o dist/switchtool-arm64.exe .
 
-      - name: Compute release checksums
-        id: checksums
-        run: |
-          SHA256=$(sha256sum dist/switchtool.exe | awk '{print $1}')
-          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
-
       - name: Upload binaries artifact
         uses: actions/upload-artifact@v4
         with:
@@ -105,94 +98,6 @@ jobs:
 
           git tag "$VERSION"
           git push origin "$VERSION"
-
-  chocolatey:
-    name: Build and Publish Chocolatey package
-    runs-on: windows-latest
-    needs: build
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download binaries
-        uses: actions/download-artifact@v4
-        with:
-          name: binaries
-          path: dist
-
-      - name: Build Chocolatey package
-        shell: bash
-        run: |
-          VERSION="${{ needs.build.outputs.version }}"
-          SHA256="${{ needs.build.outputs.sha256 }}"
-          PKG_ID="swtool"
-          PKG_DIR="chocolatey/${PKG_ID}"
-          mkdir -p "${PKG_DIR}/tools"
-          cp LICENSE "${PKG_DIR}/tools/LICENSE.txt"
-
-          cat > "${PKG_DIR}/tools/chocolateyInstall.ps1" << 'PSEOF'
-          $ErrorActionPreference = 'Stop'
-          $packageName  = 'swtool'
-          $toolsDir     = Split-Path -Parent $MyInvocation.MyCommand.Definition
-          PSEOF
-
-          cat >> "${PKG_DIR}/tools/chocolateyInstall.ps1" << PSEOF
-          \$url64      = "https://github.com/Programmercito/switcher-version-tools/releases/download/${VERSION}/switchtool.exe"
-          \$checksum64 = "${SHA256}"
-          PSEOF
-
-          cat >> "${PKG_DIR}/tools/chocolateyInstall.ps1" << 'PSEOF'
-          Get-ChocolateyWebFile -PackageName $packageName `
-            -FileFullPath "$toolsDir\switchtool.exe" `
-            -Url64bit    $url64 `
-            -Checksum64  $checksum64 `
-            -ChecksumType64 'sha256'
-          PSEOF
-
-          cat > "${PKG_DIR}/${PKG_ID}.nuspec" << NUEOF
-          <?xml version="1.0" encoding="utf-8"?>
-          <package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
-            <metadata>
-              <id>${PKG_ID}</id>
-              <version>${VERSION}</version>
-              <title>swtool - Version Manager for Windows</title>
-              <authors>Programmercito</authors>
-              <owners>Programmercito</owners>
-              <requireLicenseAcceptance>false</requireLicenseAcceptance>
-              <licenseUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/LICENSE</licenseUrl>
-              <iconUrl>https://raw.githubusercontent.com/Programmercito/switcher-version-tools/main/images/switcheo.png</iconUrl>
-              <projectUrl>https://github.com/Programmercito/switcher-version-tools</projectUrl>
-              <projectSourceUrl>https://github.com/Programmercito/switcher-version-tools</projectSourceUrl>
-              <packageSourceUrl>https://github.com/Programmercito/switcher-version-tools/tree/main/chocolatey/swtool</packageSourceUrl>
-              <docsUrl>https://github.com/Programmercito/switcher-version-tools#readme</docsUrl>
-              <bugTrackerUrl>https://github.com/Programmercito/switcher-version-tools/issues</bugTrackerUrl>
-              <releaseNotes>https://github.com/Programmercito/switcher-version-tools/releases</releaseNotes>
-              <copyright>Copyright 2026 Programmercito</copyright>
-              <summary>CLI para cambiar entre versiones de Java, Maven, Gradle, PHP, Go y Node en Windows.</summary>
-              <description>switchtool es un CLI para Windows que permite gestionar y cambiar rapidamente entre versiones de Java (JDK), Maven, Gradle, PHP, Go y Node.js. Automatiza la descarga, extraccion y configuracion de variables de entorno y PATH. Soporta archivos .zip, .tar.gz y .tgz.</description>
-              <tags>swtool switchtool java jdk maven gradle php go node version manager</tags>
-            </metadata>
-            <files>
-              <file src="tools/**" target="tools" />
-            </files>
-          </package>
-          NUEOF
-
-          cd "${PKG_DIR}"
-          choco pack "${PKG_ID}.nuspec" --out ../../dist
-
-      - name: Publish to Chocolatey
-        if: ${{ env.CHOCO_API_KEY != '' }}
-        shell: bash
-        continue-on-error: true
-        env:
-          CHOCO_API_KEY: ${{ secrets.CHOCO_API_KEY }}
-        run: |
-          VERSION="${{ needs.build.outputs.version }}"
-          NUPKG="dist/swtool.${VERSION}.nupkg"
-          choco push "$NUPKG" \
-            --source https://push.chocolatey.org/ \
-            --api-key "$CHOCO_API_KEY"
 
   release:
     name: Create GitHub Release
@@ -221,6 +126,5 @@ jobs:
           files: |
             dist/switchtool.exe
             dist/switchtool-arm64.exe
-            dist/swtool.*.nupkg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

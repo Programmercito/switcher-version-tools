@@ -277,7 +277,11 @@ func (m selectModel) renderBox() string {
 	}
 	b.WriteString("\n\n" + ansi.Truncate(mutedStyle.Render(hint), width, "…"))
 
-	return box.Width(width).Render(b.String()) + "\n"
+	boxWidth := width
+	if m.width == 0 || m.width >= 7 {
+		boxWidth += 4
+	}
+	return box.Width(boxWidth).Render(b.String()) + "\n"
 }
 
 // Select muestra una lista navegable con las flechas y retorna el item elegido.
